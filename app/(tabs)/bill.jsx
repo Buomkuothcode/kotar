@@ -2,17 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { supabase } from "../supa/supabase-client";
 
@@ -22,9 +22,9 @@ export default function BillingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [bills, setBills] = useState([]);
   const [meter, setMeter] = useState(null);
-  const [payingBillId, setPayingBillId] = useState(null);
-  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -41,7 +41,7 @@ export default function BillingScreen() {
         return;
       }
 
-      // Fetch the user's meter (only one allowed)
+      // Fetch User Meter
       const { data: meters, error: meterError } = await supabase
         .from("meters")
         .select("id, meter_number, location")
@@ -58,7 +58,7 @@ export default function BillingScreen() {
       const userMeter = meters[0];
       setMeter(userMeter);
 
-      // Fetch bills for this meter
+      // Fetch existing bills
       const { data: billsData, error: billsError } = await supabase
         .from("bills")
         .select("*")
@@ -69,200 +69,220 @@ export default function BillingScreen() {
       setBills(billsData || []);
     } catch (error) {
       Alert.alert("Error", error.message);
-      console.error(error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
-  };
+  const calculateNewBill = async () => {
+    if (!meter) return;
 
-  const handlePayPress = (bill) => {
-    setSelectedBill(bill);
-    setPaymentModalVisible(true);
+    try {
+      setIsCalculating(true);
+
+      // 1. Get the latest reading from meter_readings table
+      const { data: readings, error: readErr } = await supabase
+        .from("meter_readings")
+        .select("encrypted_value")
+        .eq("meter_id", meter.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (readErr || !readings.length) {
+        Alert.alert(
+          "No Reading",
+          "Please scan your meter first to get a reading.",
+        );
+        return;
+      }
+
+      const currentReading = parseInt(readings[0].encrypted_value);
+
+      // 2. Get previous reading from the last bill
+      const lastBill = bills[0];
+      const previousReading = lastBill ? lastBill.current_reading : 0;
+      const usage = currentReading - previousReading;
+
+      if (usage <= 0) {
+        Alert.alert(
+          "Usage Alert",
+          "No new usage detected since the last bill.",
+        );
+        return;
+      }
+
+      // 3. Fetch Ethiopian Tariffs from DB
+      const { data: tariffs, error: tariffErr } = await supabase
+        .from("tariffs")
+        .select("*")
+        .order("min_kwh", { ascending: true });
+
+      if (tariffErr) throw tariffErr;
+
+      // 4. Ethiopian Calculation Logic (Tiered)
+      // Find the tier that fits the total usage
+      const tier =
+        tariffs.find(
+          (t) =>
+            usage >= t.min_kwh && (t.max_kwh === null || usage <= t.max_kwh),
+        ) || tariffs[tariffs.length - 1];
+
+      const energyCharge = usage * tier.price_per_kwh;
+      const serviceCharge = 10.95; // Fixed monthly fee (EEU Standard)
+      const subtotal = energyCharge + serviceCharge;
+      const totalWithVAT = subtotal * 1.15; // 15% VAT
+
+      // 5. Create the Bill
+      const { error: insertErr } = await supabase.from("bills").insert([
+        {
+          meter_id: meter.id,
+          previous_reading: previousReading,
+          current_reading: currentReading,
+          usage_kwh: usage,
+          total_amount: totalWithVAT.toFixed(2),
+          status: "unpaid",
+          due_date: new Date(
+            Date.now() + 15 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        },
+      ]);
+
+      if (insertErr) throw insertErr;
+
+      Alert.alert(
+        "Success",
+        "New bill generated based on your latest reading.",
+      );
+      loadData();
+    } catch (error) {
+      Alert.alert("Calculation Error", error.message);
+    } finally {
+      setIsCalculating(false);
+    }
   };
 
   const confirmPayment = async () => {
     if (!selectedBill) return;
-
-    setPayingBillId(selectedBill.id);
-    setPaymentModalVisible(false);
-
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const transactionId = `ET-${Date.now()}`;
 
-      // Simulate payment processing (you can integrate real payment gateway here)
-      // For now, we create a payment record with status 'completed'
-      const transactionId = `TXN${Date.now()}`;
-      const { error: paymentError } = await supabase.from("payments").insert([
+      // Insert payment record
+      await supabase.from("payments").insert([
         {
           bill_id: selectedBill.id,
           user_id: user.id,
-          payment_method: "card", // placeholder
-          transaction_id: transactionId,
           amount: selectedBill.total_amount,
-          currency: "ETB",
+          transaction_id: transactionId,
           status: "completed",
         },
       ]);
 
-      if (paymentError) throw paymentError;
-
-      // Update bill status to 'paid'
-      const { error: updateError } = await supabase
+      // Update bill to paid
+      await supabase
         .from("bills")
         .update({ status: "paid" })
         .eq("id", selectedBill.id);
 
-      if (updateError) throw updateError;
-
-      // Optionally create a receipt (simplified)
-      await supabase.from("receipts").insert([
-        {
-          payment_id: transactionId, // You would need the actual payment ID, but we can query it back. For simplicity, skip or handle properly.
-          receipt_url: "https://example.com/receipt", // placeholder
-        },
-      ]);
-
-      Alert.alert("Success", "Payment completed successfully!");
-      loadData(); // Refresh bills
+      Alert.alert("Paid", "Thank you! Your payment was successful.");
+      setPaymentModalVisible(false);
+      loadData();
     } catch (error) {
-      Alert.alert("Payment Failed", error.message);
-      console.error(error);
-    } finally {
-      setPayingBillId(null);
-      setSelectedBill(null);
+      Alert.alert("Payment Error", error.message);
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString("en-ET", {
       month: "short",
       day: "numeric",
+      year: "numeric",
     });
-  };
 
-  const formatCurrency = (amount) => {
-    return `ETB ${amount.toFixed(2)}`;
-  };
-
-  if (loading) {
+  if (loading)
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#006442" />
       </View>
     );
-  }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
       <SafeAreaView />
+
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Billing</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Electricity Bills</Text>
+        <TouchableOpacity onPress={calculateNewBill} disabled={isCalculating}>
+          {isCalculating ? (
+            <ActivityIndicator size="small" />
+          ) : (
+            <Ionicons name="sync" size={24} color="#006442" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={loadData} />
         }
       >
         {!meter ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="speedometer-outline" size={64} color="#E5E7EB" />
-            <Text style={styles.emptyStateTitle}>No Meter Found</Text>
-            <Text style={styles.emptyStateText}>
-              Please add a meter first to view bills.
-            </Text>
-          </View>
-        ) : bills.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="document-text-outline" size={64} color="#E5E7EB" />
-            <Text style={styles.emptyStateTitle}>No Bills</Text>
-            <Text style={styles.emptyStateText}>
-              There are no bills for this meter yet.
-            </Text>
-          </View>
+          <Text style={styles.emptyText}>No meter registered.</Text>
         ) : (
-          <View>
-            <View style={styles.meterInfo}>
-              <Text style={styles.meterNumber}>{meter.meter_number}</Text>
-              <Text style={styles.meterLocation}>{meter.location}</Text>
+          <View style={{ padding: 20 }}>
+            <View style={styles.meterCard}>
+              <Text style={styles.meterLabel}>METER NUMBER</Text>
+              <Text style={styles.meterVal}>{meter.meter_number}</Text>
             </View>
+
             {bills.map((bill) => (
               <View key={bill.id} style={styles.billCard}>
-                <View style={styles.billHeader}>
-                  <Text style={styles.billDate}>
+                <View style={styles.billRow}>
+                  <Text style={styles.dateText}>
                     {formatDate(bill.billing_date)}
                   </Text>
                   <View
                     style={[
-                      styles.statusBadge,
-                      bill.status === "paid"
-                        ? styles.paidBadge
-                        : styles.unpaidBadge,
+                      styles.badge,
+                      {
+                        backgroundColor:
+                          bill.status === "paid" ? "#D1FAE5" : "#FEE2E2",
+                      },
                     ]}
                   >
                     <Text
-                      style={[
-                        styles.statusText,
-                        bill.status === "paid"
-                          ? styles.paidText
-                          : styles.unpaidText,
-                      ]}
+                      style={{
+                        color: bill.status === "paid" ? "#065F46" : "#991B1B",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                      }}
                     >
                       {bill.status.toUpperCase()}
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.billDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Usage</Text>
-                    <Text style={styles.detailValue}>{bill.usage_kwh} kWh</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Due Date</Text>
-                    <Text style={styles.detailValue}>
-                      {formatDate(bill.due_date)}
-                    </Text>
-                  </View>
-                  <View style={[styles.detailRow, styles.amountRow]}>
-                    <Text style={styles.amountLabel}>Total Amount</Text>
-                    <Text style={styles.amountValue}>
-                      {formatCurrency(bill.total_amount)}
-                    </Text>
-                  </View>
+                <View style={styles.usageContainer}>
+                  <Text style={styles.usageText}>{bill.usage_kwh} kWh</Text>
+                  <Text style={styles.amountText}>ETB {bill.total_amount}</Text>
                 </View>
 
                 {bill.status === "unpaid" && (
                   <TouchableOpacity
-                    style={styles.payButton}
-                    onPress={() => handlePayPress(bill)}
-                    disabled={payingBillId === bill.id}
+                    style={styles.payBtn}
+                    onPress={() => {
+                      setSelectedBill(bill);
+                      setPaymentModalVisible(true);
+                    }}
                   >
-                    {payingBillId === bill.id ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <Text style={styles.payButtonText}>Pay Now</Text>
-                    )}
+                    <Text style={styles.payBtnText}>Pay Now</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -271,33 +291,23 @@ export default function BillingScreen() {
         )}
       </ScrollView>
 
-      {/* Payment Confirmation Modal */}
-      <Modal visible={paymentModalVisible} transparent animationType="fade">
+      {/* Payment Modal */}
+      <Modal visible={paymentModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Confirm Payment</Text>
-            <Text style={styles.modalText}>
-              You are about to pay{" "}
-              <Text style={styles.modalAmount}>
-                {selectedBill && formatCurrency(selectedBill.total_amount)}
-              </Text>{" "}
-              for the bill dated{" "}
-              {selectedBill && formatDate(selectedBill.billing_date)}.
+            <Text style={styles.modalSub}>
+              Amount: ETB {selectedBill?.total_amount}
             </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setPaymentModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmPayment}
-              >
-                <Text style={styles.confirmButtonText}>Pay</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={confirmPayment}
+            >
+              <Text style={styles.confirmBtnText}>Confirm & Pay</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setPaymentModalVisible(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -310,221 +320,73 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 30,
-    backgroundColor: "#F3F4F6",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  scrollContent: {
     padding: 20,
-    paddingBottom: 40,
-  },
-  meterInfo: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  meterNumber: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  meterLocation: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  emptyState: {
     alignItems: "center",
-    marginTop: 60,
+    backgroundColor: "#FFF",
   },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  billCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  billHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  billDate: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  paidBadge: {
-    backgroundColor: "#D1FAE5",
-  },
-  unpaidBadge: {
-    backgroundColor: "#FEE2E2",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  paidText: {
-    color: "#059669",
-  },
-  unpaidText: {
-    color: "#DC2626",
-  },
-  billDetails: {
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1F2937",
-  },
-  amountRow: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  amountLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  amountValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#006442",
-  },
-  payButton: {
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  meterCard: {
     backgroundColor: "#006442",
-    borderRadius: 30,
-    paddingVertical: 14,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  meterLabel: { color: "#FFF", opacity: 0.8, fontSize: 10 },
+  meterVal: { color: "#FFF", fontSize: 20, fontWeight: "bold" },
+  billCard: {
+    backgroundColor: "#FFF",
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+    elevation: 2,
+  },
+  billRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  dateText: { color: "#6B7280", fontSize: 14 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  usageContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#006442",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    marginVertical: 10,
   },
-  payButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+  usageText: { fontSize: 16, color: "#374151" },
+  amountText: { fontSize: 20, fontWeight: "bold", color: "#111827" },
+  payBtn: {
+    backgroundColor: "#006442",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: "center",
   },
+  payBtnText: { color: "#FFF", fontWeight: "bold" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
-    alignItems: "center",
+    padding: 30,
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 30,
-    padding: 24,
-    width: "80%",
-    maxWidth: 340,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 12,
-  },
-  modalText: {
-    fontSize: 16,
-    color: "#4B5563",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  modalAmount: {
-    fontWeight: "800",
-    color: "#006442",
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 30,
+    backgroundColor: "#FFF",
+    padding: 25,
+    borderRadius: 16,
     alignItems: "center",
-    marginHorizontal: 6,
   },
-  cancelButton: {
-    backgroundColor: "#F3F4F6",
-  },
-  cancelButtonText: {
-    color: "#4B5563",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  confirmButton: {
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
+  modalSub: { fontSize: 16, marginBottom: 20, color: "#4B5563" },
+  confirmBtn: {
     backgroundColor: "#006442",
-    shadowColor: "#006442",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    width: "100%",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 15,
   },
-  confirmButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  confirmBtnText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
+  cancelText: { color: "#9CA3AF" },
+  emptyText: { textAlign: "center", marginTop: 50, color: "#9CA3AF" },
 });

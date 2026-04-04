@@ -3,7 +3,7 @@ import { Buffer } from "buffer";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -24,14 +23,55 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const [scannedValue, setScannedValue] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [manualModalVisible, setManualModalVisible] = useState(false);
-  const [manualValue, setManualValue] = useState("");
   const [capturedImage, setCapturedImage] = useState(null);
   const cameraRef = useRef(null);
   const router = useRouter();
   const { meterId } = useLocalSearchParams();
+  const [userId, setUserId] = useState(null);
+  const [meterIdState, setMeterIdState] = useState(meterId);
+  const [meters, setMeters] = useState([]);
 
   const OCR_SPACE_API_KEY = "K87640750688957";
+
+  useEffect(() => {
+    const initialize = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("../screens/Login/Login");
+        return;
+      }
+
+      const currentUserId = session.user.id;
+      setUserId(currentUserId);
+
+      const { data, error } = await supabase
+        .from("meters")
+        .select("*")
+        .eq("user_id", currentUserId);
+
+      if (error) {
+        console.error("Failed to fetch meters", error);
+        return;
+      }
+
+      const metersData = data || [];
+      setMeters(metersData);
+
+      const selectedId =
+        meterId ||
+        meterIdState ||
+        (metersData.length > 0 ? metersData[0].id : null);
+      setMeterIdState(selectedId);
+
+      console.log("Fetched meters for user:", metersData);
+      console.log("Selected meter ID for readings:", selectedId);
+    };
+
+    initialize();
+  }, [meterId]);
 
   if (!permission) return <View />;
   if (!permission.granted) {
@@ -121,8 +161,10 @@ export default function ScanScreen() {
       const readingValue = numberMatches ? numberMatches.join("") : null;
 
       if (!readingValue) {
-        // Show manual entry option instead of just failing
-        setManualModalVisible(true);
+        Alert.alert(
+          "Scan Error",
+          "OCR could not extract a valid numeric reading. Please re-scan.",
+        );
         return;
       }
 
@@ -141,12 +183,20 @@ export default function ScanScreen() {
   };
 
   const confirmAndSave = async () => {
+    if (!meterIdState) {
+      Alert.alert(
+        "Meter not selected",
+        "Please select or add a meter before saving readings.",
+      );
+      return;
+    }
+
     try {
       const encryptedValue = Buffer.from(scannedValue).toString("base64");
 
       const { error } = await supabase.from("meter_readings").insert([
         {
-          meter_id: meterId,
+          meter_id: meterIdState,
           encrypted_value: encryptedValue,
           ocr_raw_text: scannedValue,
           image_url: capturedImage,
@@ -168,25 +218,14 @@ export default function ScanScreen() {
 
   const retakePhoto = () => {
     setModalVisible(false);
-    setManualModalVisible(false);
     setScannedValue(null);
     setCapturedImage(null);
-  };
-
-  const handleManualSubmit = async () => {
-    if (!manualValue.trim() || isNaN(Number(manualValue))) {
-      Alert.alert("Invalid Value", "Please enter a valid number.");
-      return;
-    }
-
-    setScannedValue(manualValue.trim());
-    setManualModalVisible(false);
-    setModalVisible(true); // Show confirmation with the manual value
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+
       <CameraView
         style={styles.camera}
         ref={cameraRef}
@@ -276,49 +315,6 @@ export default function ScanScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Manual Entry Modal (when OCR fails) */}
-      <Modal visible={manualModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Enter Reading Manually</Text>
-              <TouchableOpacity onPress={retakePhoto}>
-                <Ionicons name="close" size={28} color="#1F2937" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.manualHint}>
-              We couldn't read the digits automatically. Please enter the meter
-              reading below.
-            </Text>
-
-            <TextInput
-              style={styles.manualInput}
-              placeholder="e.g., 12345"
-              keyboardType="numeric"
-              value={manualValue}
-              onChangeText={setManualValue}
-              autoFocus
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.cancelBtn]}
-                onPress={retakePhoto}
-              >
-                <Text style={styles.cancelBtnText}>Retake</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.confirmBtn]}
-                onPress={handleManualSubmit}
-              >
-                <Text style={styles.confirmBtnText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -380,6 +376,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     fontWeight: "500",
   },
+
   footer: { paddingBottom: 50, alignItems: "center" },
   captureBtn: {
     width: 80,
@@ -481,25 +478,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
-  },
-  // Manual entry styles
-  manualHint: {
-    fontSize: 16,
-    color: "#4B5563",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  manualInput: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#1F2937",
-    textAlign: "center",
-    marginBottom: 24,
   },
 });
