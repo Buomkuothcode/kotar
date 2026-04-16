@@ -2,11 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -19,7 +21,8 @@ const EDGE_FUNCTION_URL =
   "https://apwvpnpdwkavrujqefxf.supabase.co/functions/v1/read-meter";
 
 export default function ManualEntryScreen() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
   const [meters, setMeters] = useState([]);
@@ -31,45 +34,63 @@ export default function ManualEntryScreen() {
   const router = useRouter();
   const { meterId } = useLocalSearchParams();
 
+  const fetchMeters = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.replace("../screens/Login/Login");
+      return;
+    }
+
+    const currentUserId = session.user.id;
+    setUserId(currentUserId);
+
+    const { data, error } = await supabase
+      .from("meters")
+      .select("*")
+      .eq("user_id", currentUserId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch meters", error);
+      Alert.alert("Error", "Could not load your meters.");
+      return;
+    }
+
+    const metersData = data || [];
+    setMeters(metersData);
+
+    // Preserve selected meter if it still exists, otherwise pick first or passed meterId
+    let newSelectedId = null;
+    if (meterId && metersData.some((m) => m.id === meterId)) {
+      newSelectedId = meterId;
+    } else if (
+      selectedMeterId &&
+      metersData.some((m) => m.id === selectedMeterId)
+    ) {
+      newSelectedId = selectedMeterId;
+    } else if (metersData.length > 0) {
+      newSelectedId = metersData[0].id;
+    }
+    setSelectedMeterId(newSelectedId);
+  }, [meterId, selectedMeterId]);
+
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.replace("../screens/Login/Login");
-        return;
-      }
-
-      const currentUserId = session.user.id;
-      setUserId(currentUserId);
-
-      const { data, error } = await supabase
-        .from("meters")
-        .select("*")
-        .eq("user_id", currentUserId);
-
-      if (error) {
-        console.error("Failed to fetch meters", error);
-        Alert.alert("Error", "Could not load your meters.");
-        setLoading(false);
-        return;
-      }
-
-      const metersData = data || [];
-      setMeters(metersData);
-
-      const defaultId =
-        meterId || (metersData.length > 0 ? metersData[0].id : null);
-      setSelectedMeterId(defaultId);
-
+      await fetchMeters();
       setLoading(false);
     };
-
     initialize();
-  }, [meterId]);
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchMeters();
+    setRefreshing(false);
+  }, [fetchMeters]);
 
   const handleSave = async () => {
     if (!selectedMeterId) {
@@ -126,7 +147,7 @@ export default function ManualEntryScreen() {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.8,
-        allowsEditing: true, // user can crop
+        allowsEditing: true,
       });
 
       if (result.canceled) {
@@ -138,7 +159,6 @@ export default function ManualEntryScreen() {
       const uri = asset.uri;
       if (!uri) throw new Error("No image URI");
 
-      // Resize and compress
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 1024 } }],
@@ -150,7 +170,6 @@ export default function ManualEntryScreen() {
 
       const finalImageUri = manipResult.uri;
 
-      // Build FormData (React Native way)
       const formData = new FormData();
       formData.append("file", {
         uri: finalImageUri,
@@ -202,101 +221,168 @@ export default function ManualEntryScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#006442" />
+        <ActivityIndicator size="large" color="#2E7D32" />
+        <Text style={styles.loadingText}>Loading your meters...</Text>
       </View>
     );
   }
 
+  const selectedMeter = meters.find((m) => m.id === selectedMeterId);
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Enter Reading</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Select Meter</Text>
-        <View style={styles.pickerContainer}>
-          {meters.map((meter) => (
-            <TouchableOpacity
-              key={meter.id}
-              style={[
-                styles.meterOption,
-                selectedMeterId === meter.id && styles.meterOptionSelected,
-              ]}
-              onPress={() => setSelectedMeterId(meter.id)}
-            >
-              <Text
-                style={[
-                  styles.meterText,
-                  selectedMeterId === meter.id && styles.meterTextSelected,
-                ]}
-              >
-                {meter.name || meter.meter_number || "Unnamed Meter"}
-              </Text>
-              {selectedMeterId === meter.id && (
-                <Ionicons name="checkmark-circle" size={20} color="#006442" />
-              )}
-            </TouchableOpacity>
-          ))}
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2E7D32"
+            colors={["#2E7D32"]}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>New Reading</Text>
+          <View style={styles.headerPlaceholder} />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>kWh Reading</Text>
-        <View style={styles.readingDisplayContainer}>
-          {scannedReading ? (
-            <Text style={styles.readingValue}>{scannedReading}</Text>
+        {/* Meter Selection Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="flash-outline" size={20} color="#2E7D32" />
+            <Text style={styles.cardTitle}>Select Meter</Text>
+          </View>
+          {meters.length === 0 ? (
+            <View style={styles.emptyMeters}>
+              <Ionicons name="alert-circle-outline" size={32} color="#9CA3AF" />
+              <Text style={styles.emptyText}>No meters found</Text>
+              <TouchableOpacity
+                style={styles.addMeterButton}
+                onPress={() => router.push("/add-meter")}
+              >
+                <Text style={styles.addMeterButtonText}>
+                  Add Your First Meter
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            <Text style={styles.readingPlaceholder}>—</Text>
+            <View style={styles.meterList}>
+              {meters.map((meter) => (
+                <TouchableOpacity
+                  key={meter.id}
+                  style={[
+                    styles.meterItem,
+                    selectedMeterId === meter.id && styles.meterItemSelected,
+                  ]}
+                  onPress={() => setSelectedMeterId(meter.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.meterInfo}>
+                    <Text
+                      style={[
+                        styles.meterName,
+                        selectedMeterId === meter.id &&
+                          styles.meterNameSelected,
+                      ]}
+                    >
+                      {meter.name || "Unnamed Meter"}
+                    </Text>
+                    {meter.meter_number && (
+                      <Text style={styles.meterNumber}>
+                        {meter.meter_number}
+                      </Text>
+                    )}
+                  </View>
+                  {selectedMeterId === meter.id && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color="#2E7D32"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
 
+        {/* Reading Display Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="speedometer-outline" size={20} color="#2E7D32" />
+            <Text style={styles.cardTitle}>Current Reading</Text>
+          </View>
+          <View style={styles.readingWrapper}>
+            {scannedReading ? (
+              <>
+                <Text style={styles.readingValue}>{scannedReading}</Text>
+                <Text style={styles.readingUnit}>kWh</Text>
+              </>
+            ) : (
+              <Text style={styles.readingPlaceholder}>—</Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.scanButton, scanning && styles.scanButtonDisabled]}
+            onPress={scannedReading ? handleRescan : handleScan}
+            disabled={scanning}
+            activeOpacity={0.8}
+          >
+            {scanning ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="camera-outline" size={20} color="#fff" />
+                <Text style={styles.scanButtonText}>
+                  {scannedReading ? "Scan Again" : "Scan Meter"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {scannedReading && (
+            <Text style={styles.hintText}>
+              <Ionicons name="lock-closed-outline" size={12} color="#6B7280" />{" "}
+              Reading locked — tap "Scan Again" to replace
+            </Text>
+          )}
+          {rawOutput && !scannedReading && (
+            <Text style={styles.errorHint}>{rawOutput}</Text>
+          )}
+        </View>
+
+        {/* Save Button */}
         <TouchableOpacity
-          style={[styles.scanBtn, scanning && styles.scanBtnDisabled]}
-          onPress={scannedReading ? handleRescan : handleScan}
-          disabled={scanning}
+          style={[
+            styles.saveButton,
+            (saving || !scannedReading || !selectedMeterId) &&
+              styles.saveButtonDisabled,
+          ]}
+          onPress={handleSave}
+          disabled={saving || !scannedReading || !selectedMeterId}
+          activeOpacity={0.8}
         >
-          {scanning ? (
+          {saving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
               <Ionicons
-                name="camera-outline"
-                size={20}
+                name="checkmark-circle-outline"
+                size={22}
                 color="#fff"
-                style={{ marginRight: 8 }}
               />
-              <Text style={styles.scanBtnText}>
-                {scannedReading ? "Rescan Meter" : "Scan Meter"}
-              </Text>
+              <Text style={styles.saveButtonText}>Save Reading</Text>
             </>
           )}
         </TouchableOpacity>
 
-        {scannedReading && (
-          <Text style={styles.hint}>
-            Reading locked — tap "Rescan Meter" to capture again.
-          </Text>
-        )}
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.saveBtn,
-          (saving || !scannedReading) && styles.saveBtnDisabled,
-        ]}
-        onPress={handleSave}
-        disabled={saving || !scannedReading}
-      >
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveBtnText}>Save Reading</Text>
-        )}
-      </TouchableOpacity>
+        {/* Extra bottom spacing */}
+        <View style={{ height: 20 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -304,138 +390,218 @@ export default function ManualEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#F5F7FA",
+  },
+  scrollContent: {
+    paddingBottom: 30,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F5F7FA",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#4B5563",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "#fff",
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-  backBtn: {
-    padding: 8,
+  backButton: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#1F2937",
+    letterSpacing: -0.3,
   },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+  headerPlaceholder: {
+    width: 40,
   },
-  label: {
+  card: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  cardTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#374151",
-    marginBottom: 12,
+    marginLeft: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  pickerContainer: {
-    backgroundColor: "#fff",
+  meterList: {
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
     overflow: "hidden",
   },
-  meterOption: {
+  meterItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
+    justifyContent: "space-between",
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  meterOptionSelected: {
-    backgroundColor: "#F0FDF4",
-  },
-  meterText: {
-    fontSize: 16,
-    color: "#4B5563",
-  },
-  meterTextSelected: {
-    color: "#006442",
-    fontWeight: "500",
-  },
-  readingDisplayContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: "#F9FAFB",
     borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  meterItemSelected: {
+    backgroundColor: "#E8F5E9",
+    borderColor: "#A5D6A7",
+  },
+  meterInfo: {
+    flex: 1,
+  },
+  meterName: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1F2937",
+  },
+  meterNameSelected: {
+    color: "#1B5E20",
+  },
+  meterNumber: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  emptyMeters: {
+    alignItems: "center",
+    paddingVertical: 30,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  addMeterButton: {
+    backgroundColor: "#2E7D32",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+  },
+  addMeterButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  readingWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 20,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 90,
   },
   readingValue: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#006442",
-    letterSpacing: 2,
+    fontSize: 56,
+    fontWeight: "800",
+    color: "#2E7D32",
+    letterSpacing: -1,
+    lineHeight: 64,
+  },
+  readingUnit: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#4B5563",
+    marginTop: 4,
   },
   readingPlaceholder: {
-    fontSize: 36,
+    fontSize: 56,
     fontWeight: "300",
-    color: "#9CA3AF",
+    color: "#D1D5DB",
   },
-  scanBtn: {
-    backgroundColor: "#006442",
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 30,
-    alignItems: "center",
+  scanButton: {
+    backgroundColor: "#2E7D32",
     flexDirection: "row",
-    justifyContent: "center",
-    shadowColor: "#006442",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  scanBtnDisabled: {
-    opacity: 0.7,
-  },
-  scanBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  hint: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  saveBtn: {
-    backgroundColor: "#006442",
-    marginHorizontal: 20,
-    marginTop: 40,
-    paddingVertical: 16,
-    borderRadius: 30,
     alignItems: "center",
-    shadowColor: "#006442",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 40,
+    shadowColor: "#2E7D32",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  saveBtnDisabled: {
+  scanButtonDisabled: {
+    opacity: 0.6,
+  },
+  scanButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  hintText: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  errorHint: {
+    fontSize: 13,
+    color: "#DC2626",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  saveButton: {
+    backgroundColor: "#1B5E20",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 20,
+    marginTop: 8,
+    paddingVertical: 18,
+    borderRadius: 40,
+    shadowColor: "#1B5E20",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  saveButtonDisabled: {
     opacity: 0.5,
   },
-  saveBtnText: {
-    color: "#fff",
+  saveButtonText: {
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "700",
+    marginLeft: 10,
   },
 });
