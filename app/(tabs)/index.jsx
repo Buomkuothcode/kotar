@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -8,11 +10,13 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { supabase } from "../supa/supabase-client";
+
+const EDGE_FUNCTION_URL =
+  "https://apwvpnpdwkavrujqefxf.supabase.co/functions/v1/read-meter";
 
 export default function ManualEntryScreen() {
   const [loading, setLoading] = useState(false);
@@ -20,12 +24,13 @@ export default function ManualEntryScreen() {
   const [userId, setUserId] = useState(null);
   const [meters, setMeters] = useState([]);
   const [selectedMeterId, setSelectedMeterId] = useState(null);
-  const [manualValue, setManualValue] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scannedReading, setScannedReading] = useState(null);
+  const [rawOutput, setRawOutput] = useState("");
 
   const router = useRouter();
   const { meterId } = useLocalSearchParams();
 
-  // Fetch user and meters
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
@@ -56,7 +61,6 @@ export default function ManualEntryScreen() {
       const metersData = data || [];
       setMeters(metersData);
 
-      // Pre-select meter if passed via params or use first meter
       const defaultId =
         meterId || (metersData.length > 0 ? metersData[0].id : null);
       setSelectedMeterId(defaultId);
@@ -67,24 +71,21 @@ export default function ManualEntryScreen() {
     initialize();
   }, [meterId]);
 
-  // Save manual reading
   const handleSave = async () => {
     if (!selectedMeterId) {
       Alert.alert("No Meter", "Please select a meter first.");
       return;
     }
 
-    const trimmedValue = manualValue.trim();
-    if (!trimmedValue) {
-      Alert.alert("Invalid Value", "Please enter a kWh reading.");
+    if (!scannedReading) {
+      Alert.alert("No Reading", "Please scan the meter first.");
       return;
     }
 
-    // Optional: validate numeric format
-    if (!/^\d+(\.\d+)?$/.test(trimmedValue)) {
+    if (!/^\d+(\.\d+)?$/.test(scannedReading)) {
       Alert.alert(
-        "Invalid Format",
-        "Please enter a valid number (e.g., 12345 or 123.45).",
+        "Invalid Reading",
+        "The scanned value is not a valid number.",
       );
       return;
     }
@@ -94,14 +95,14 @@ export default function ManualEntryScreen() {
       const { error } = await supabase.from("meter_readings").insert([
         {
           meter_id: selectedMeterId,
-          value: trimmedValue, // stored as plain text (no encryption)
+          value: scannedReading,
           reading_date: new Date().toISOString(),
         },
       ]);
 
       if (error) throw error;
 
-      Alert.alert("Success", `Reading saved: ${trimmedValue} kWh`, [
+      Alert.alert("Success", `Reading saved: ${scannedReading} kWh`, [
         { text: "OK", onPress: () => router.replace("/(tabs)") },
       ]);
     } catch (e) {
@@ -110,6 +111,92 @@ export default function ManualEntryScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleScan = async () => {
+    setScanning(true);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Camera permission is required.");
+        setScanning(false);
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsEditing: true, // user can crop
+      });
+
+      if (result.canceled) {
+        setScanning(false);
+        return;
+      }
+
+      const asset = result.assets?.[0] || result;
+      const uri = asset.uri;
+      if (!uri) throw new Error("No image URI");
+
+      // Resize and compress
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1024 } }],
+        {
+          compress: 0.7,
+          format: ImageManipulator.SaveFormat.JPEG,
+        },
+      );
+
+      const finalImageUri = manipResult.uri;
+
+      // Build FormData (React Native way)
+      const formData = new FormData();
+      formData.append("file", {
+        uri: finalImageUri,
+        name: "meter.jpg",
+        type: "image/jpeg",
+      });
+
+      const edgeResponse = await fetch(EDGE_FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          apikey: "sb_publishable_Jd6WXKljepu2-dRBQQm4QA_nQSucktc",
+          Authorization:
+            "Bearer sb_publishable_Jd6WXKljepu2-dRBQQm4QA_nQSucktc",
+        },
+        body: formData,
+      });
+
+      const data = await edgeResponse.json();
+
+      if (data.status === "success" && data.reading) {
+        setScannedReading(data.reading);
+        setRawOutput(data.raw_output || "");
+        Alert.alert("Scan Successful", `Detected reading: ${data.reading}`);
+      } else {
+        const errorMsg =
+          data.raw_output || "Could not read meter. Please try again.";
+        setScannedReading(null);
+        setRawOutput(errorMsg);
+        Alert.alert("Scan Failed", errorMsg);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert(
+        "Scan Error",
+        error.message || "An unexpected error occurred.",
+      );
+      setScannedReading(null);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleRescan = () => {
+    setScannedReading(null);
+    setRawOutput("");
+    handleScan();
   };
 
   if (loading) {
@@ -124,16 +211,11 @@ export default function ManualEntryScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Enter Reading</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Meter Selection */}
       <View style={styles.section}>
         <Text style={styles.label}>Select Meter</Text>
         <View style={styles.pickerContainer}>
@@ -162,28 +244,52 @@ export default function ManualEntryScreen() {
         </View>
       </View>
 
-      {/* Manual Entry Input */}
       <View style={styles.section}>
-        <Text style={styles.label}>kWh Value</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., 12345"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-          value={manualValue}
-          onChangeText={setManualValue}
-          autoFocus
-        />
-        <Text style={styles.hint}>
-          Enter the reading exactly as shown on your meter
-        </Text>
+        <Text style={styles.label}>kWh Reading</Text>
+        <View style={styles.readingDisplayContainer}>
+          {scannedReading ? (
+            <Text style={styles.readingValue}>{scannedReading}</Text>
+          ) : (
+            <Text style={styles.readingPlaceholder}>—</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.scanBtn, scanning && styles.scanBtnDisabled]}
+          onPress={scannedReading ? handleRescan : handleScan}
+          disabled={scanning}
+        >
+          {scanning ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons
+                name="camera-outline"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.scanBtnText}>
+                {scannedReading ? "Rescan Meter" : "Scan Meter"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {scannedReading && (
+          <Text style={styles.hint}>
+            Reading locked — tap "Rescan Meter" to capture again.
+          </Text>
+        )}
       </View>
 
-      {/* Save Button */}
       <TouchableOpacity
-        style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+        style={[
+          styles.saveBtn,
+          (saving || !scannedReading) && styles.saveBtnDisabled,
+        ]}
         onPress={handleSave}
-        disabled={saving}
+        disabled={saving || !scannedReading}
       >
         {saving ? (
           <ActivityIndicator color="#fff" />
@@ -261,17 +367,49 @@ const styles = StyleSheet.create({
     color: "#006442",
     fontWeight: "500",
   },
-  input: {
+  readingDisplayContainer: {
     backgroundColor: "#fff",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 24,
-    fontWeight: "600",
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 90,
+  },
+  readingValue: {
+    fontSize: 36,
+    fontWeight: "700",
     color: "#006442",
-    textAlign: "center",
+    letterSpacing: 2,
+  },
+  readingPlaceholder: {
+    fontSize: 36,
+    fontWeight: "300",
+    color: "#9CA3AF",
+  },
+  scanBtn: {
+    backgroundColor: "#006442",
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    shadowColor: "#006442",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  scanBtnDisabled: {
+    opacity: 0.7,
+  },
+  scanBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   hint: {
     fontSize: 13,
@@ -293,7 +431,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveBtnDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   saveBtnText: {
     color: "#fff",

@@ -341,9 +341,6 @@ export default function MonthlyHistoryScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#1F2937" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Billing History</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -361,9 +358,6 @@ export default function MonthlyHistoryScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Billing History</Text>
         <TouchableOpacity onPress={fetchAndCalculate}>
           <Ionicons name="refresh" size={24} color="#006442" />

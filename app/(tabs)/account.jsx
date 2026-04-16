@@ -9,11 +9,12 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+
 import { supabase } from "../supa/supabase-client";
 
-const Account = ({ navigation }) => {
+const Account = () => {
   const [profile, setProfile] = useState(null);
   const [meters, setMeters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +99,7 @@ const Account = ({ navigation }) => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigation.replace("Login");
+    router.replace("/screens/Login/Login");
   };
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#006442" />;
@@ -127,8 +128,7 @@ const Account = ({ navigation }) => {
           subtitle={`${meters.length} Connected`}
           onPress={() => setModalVisible(true)}
         />
-        <MenuOption icon="card-outline" title="Payment Methods" />
-        <MenuOption icon="time-outline" title="Payment History" />
+
         <MenuOption icon="settings-outline" title="Settings" />
         <MenuOption icon="help-circle-outline" title="Help & Support" />
       </View>

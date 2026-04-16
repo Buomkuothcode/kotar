@@ -1,8 +1,10 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,13 +13,109 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient,
+  Path,
+  Stop,
+} from "react-native-svg";
 import { supabase } from "../../supa/supabase-client";
+
+const { width, height } = Dimensions.get("window");
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Animation values
+  const wave1Translate = useRef(new Animated.Value(0)).current;
+  const wave2Translate = useRef(new Animated.Value(0)).current;
+  const bubbleScale = useRef(new Animated.Value(1)).current;
+  const bubbleOpacity = useRef(new Animated.Value(0.5)).current;
+  const rotateValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Infinite wave animations
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave1Translate, {
+          toValue: -width * 0.6,
+          duration: 12000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave1Translate, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave2Translate, {
+          toValue: width * 0.6,
+          duration: 15000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave2Translate, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Floating bubble animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bubbleScale, {
+          toValue: 1.3,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bubbleScale, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bubbleOpacity, {
+          toValue: 0.8,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bubbleOpacity, {
+          toValue: 0.3,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    // Slow rotation
+    Animated.loop(
+      Animated.timing(rotateValue, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      }),
+    ).start();
+  }, []);
+
+  const spin = rotateValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -36,7 +134,6 @@ const Login = ({ navigation }) => {
       setLoading(false);
     } else {
       setLoading(false);
-
       router.replace("../../(tabs)");
     }
   };
@@ -46,6 +143,94 @@ const Login = ({ navigation }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
+      {/* Animated Background Layer */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Svg height={height} width={width} style={styles.svgBackground}>
+          <Defs>
+            <LinearGradient id="grad1" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor="#FFB6C1" stopOpacity="0.3" />
+              <Stop offset="0.5" stopColor="#006442" stopOpacity="0.4" />
+              <Stop offset="1" stopColor="#87CEEB" stopOpacity="0.3" />
+            </LinearGradient>
+            <LinearGradient id="grad2" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#98FB98" stopOpacity="0.3" />
+              <Stop offset="1" stopColor="#006442" stopOpacity="0.4" />
+            </LinearGradient>
+            <LinearGradient id="grad3" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#E6E6FA" stopOpacity="0.5" />
+              <Stop offset="1" stopColor="#FFF0F5" stopOpacity="0.2" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Rotating decorative circle */}
+          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+            <Circle
+              cx={width * 0.85}
+              cy={height * 0.15}
+              r="60"
+              fill="url(#grad3)"
+            />
+          </Animated.View>
+
+          {/* Wavy line 1 (moving left) */}
+          <AnimatedPath
+            d={`M -50 ${height * 0.3} Q ${width * 0.25} ${height * 0.2}, ${width * 0.5} ${height * 0.3} T ${width + 50} ${height * 0.25}`}
+            stroke="url(#grad1)"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+            style={{ transform: [{ translateX: wave1Translate }] }}
+          />
+
+          {/* Wavy line 2 (moving right) */}
+          <AnimatedPath
+            d={`M -50 ${height * 0.45} Q ${width * 0.3} ${height * 0.55}, ${width * 0.6} ${height * 0.4} T ${width + 50} ${height * 0.5}`}
+            stroke="url(#grad2)"
+            strokeWidth="10"
+            fill="none"
+            strokeLinecap="round"
+            style={{ transform: [{ translateX: wave2Translate }] }}
+          />
+
+          {/* Wavy line 3 (static but with gradient) */}
+          <Path
+            d={`M -50 ${height * 0.7} Q ${width * 0.4} ${height * 0.8}, ${width * 0.7} ${height * 0.65} T ${width + 50} ${height * 0.75}`}
+            stroke="url(#grad1)"
+            strokeWidth="6"
+            fill="none"
+            strokeLinecap="round"
+            opacity="0.6"
+          />
+
+          {/* Floating bubbles */}
+          <AnimatedCircle
+            cx={width * 0.15}
+            cy={height * 0.2}
+            r="15"
+            fill="#FFB6C1"
+            opacity={bubbleOpacity}
+            style={{ transform: [{ scale: bubbleScale }] }}
+          />
+          <AnimatedCircle
+            cx={width * 0.8}
+            cy={height * 0.6}
+            r="20"
+            fill="#DDA0DD"
+            opacity={bubbleOpacity}
+            style={{ transform: [{ scale: bubbleScale }] }}
+          />
+          <AnimatedCircle
+            cx={width * 0.9}
+            cy={height * 0.8}
+            r="12"
+            fill="#87CEEB"
+            opacity={bubbleOpacity}
+            style={{ transform: [{ scale: bubbleScale }] }}
+          />
+        </Svg>
+      </View>
+
+      {/* Main Content */}
       <View style={styles.header}>
         <Text style={styles.brandName}>Kotar</Text>
         <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -106,6 +291,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     paddingHorizontal: 30,
+  },
+  svgBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     marginTop: 100,
