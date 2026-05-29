@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import color from '../utils/color';
+import { useLanguage } from '../languages/LanguageContext';
 
 const COLORS = {
     primary: color.primary,
@@ -17,6 +18,7 @@ const COLORS = {
 
 export default function PrivacyScreen() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [theme, setTheme] = useState('light');
 
     useEffect(() => {
@@ -43,40 +45,37 @@ export default function PrivacyScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
             {/* Header */}
             <View style={styles.header}>
-
-                <Text style={[styles.headerTitle, { color: textColor }]}>Privacy Policy</Text>
+                <Text style={[styles.headerTitle, { color: textColor }]}>{t("privacy_policy")}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <Text style={[styles.intro, { color: subTextColor }]}>
-                    Last updated: December 1, 2025
+                    {t("last_updated")}
                 </Text>
 
                 <Text style={[styles.intro, { color: subTextColor, marginBottom: 20 }]}>
-                    At UniExit, we take your privacy seriously. This document outlines how we handle your data.
+                    {t("privacy_intro")}
                 </Text>
 
                 <PolicySection
-                    title="1. Data Collection"
-                    content="We collect minimal data necessary to provide our services, such as your username, email address (for authentication)."
+                    title={t("data_collection_title")}
+                    content={t("data_collection_content")}
                 />
 
                 <PolicySection
-                    title="2. Usage of Information"
-                    content="Your information is used solely to personalize your learning experience."
+                    title={t("usage_title")}
+                    content={t("usage_content")}
                 />
 
                 <PolicySection
-                    title="3. Data Security"
-                    content="We implement industry-standard security measures to protect your personal information from unauthorized access, alteration, or disclosure."
+                    title={t("data_security_title")}
+                    content={t("data_security_content")}
                 />
 
-              
-
                 <PolicySection
-                    title="4. Contact Us"
-                    content="If you have questions about this policy, please contact us via the Help section in your account settings."
+                    title={t("contact_title")}
+                    content={t("contact_content")}
                 />
 
                 <View style={{ height: 50 }} />

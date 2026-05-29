@@ -9,11 +9,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { supabase } from "../supa/supabase-client";
+import { useLanguage } from "../languages/LanguageContext";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
-const Account = ({ navigation }) => {
+const Account = () => {
   const [profile, setProfile] = useState(null);
   const [meters, setMeters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,7 @@ const Account = ({ navigation }) => {
   const [description, setDescription] = useState("");
 
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     checkUser();
@@ -67,7 +70,7 @@ const Account = ({ navigation }) => {
 
   const handleAddMeter = async () => {
     if (!meterNumber || !location) {
-      Alert.alert("Error", "Please fill in Meter Number and Location");
+      Alert.alert(t("error"), t("fill_all_fields"));
       return;
     }
 
@@ -85,9 +88,9 @@ const Account = ({ navigation }) => {
     ]);
 
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("error"), error.message);
     } else {
-      Alert.alert("Success", "Meter added successfully");
+      Alert.alert(t("success"), t("account_created_success") || "Meter added successfully");
       setModalVisible(false);
       setMeterNumber("");
       setLocation("");
@@ -98,7 +101,7 @@ const Account = ({ navigation }) => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigation.replace("Login");
+    router.replace("/screens/Login/Login");
   };
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#006442" />;
@@ -123,20 +126,24 @@ const Account = ({ navigation }) => {
       <View style={styles.menuContainer}>
         <MenuOption
           icon="speedometer-outline"
-          title="My Meters"
-          subtitle={`${meters.length} Connected`}
-          onPress={() => setModalVisible(true)}
+          title={t("my_meters_menu")}
+          subtitle={`${meters.length} ${t("connected")}`}
+          onPress={() => router.push("/meter")}
         />
-        <MenuOption icon="card-outline" title="Payment Methods" />
-        <MenuOption icon="time-outline" title="Payment History" />
-        <MenuOption icon="settings-outline" title="Settings" />
-        <MenuOption icon="help-circle-outline" title="Help & Support" />
+
+        <MenuOption icon="settings-outline" title={t("settings")} />
+        <MenuOption icon="help-circle-outline" title={t("help_support")} />
+      </View>
+
+      {/* Language Switcher Section */}
+      <View style={{ marginTop: 10, marginBottom: 10 }}>
+        <LanguageSwitcher />
       </View>
 
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#FF4D4D" />
-        <Text style={styles.logoutText}>Log Out</Text>
+        <Text style={styles.logoutText}>{t("log_out")}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

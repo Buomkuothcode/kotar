@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../supa/supabase-client";
+import { useLanguage } from "../languages/LanguageContext";
 
 const { width } = Dimensions.get("window");
 
@@ -50,6 +51,7 @@ const SkeletonCard = () => (
 
 export default function ModernAccount() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [meters, setMeters] = useState([]);
@@ -96,7 +98,7 @@ export default function ModernAccount() {
 
   const handleSaveMeter = async () => {
     if (!editingMeter && meters.length >= 1) {
-      Alert.alert("Limit Reached", "You can only have one meter.");
+      Alert.alert(t("limit_reached"), t("limit_one_meter"));
       return;
     }
 
@@ -124,7 +126,7 @@ export default function ModernAccount() {
       error = err;
     }
 
-    if (error) Alert.alert("Error", error.message);
+    if (error) Alert.alert(t("error"), error.message);
     else {
       setModalVisible(false);
       resetForm();
@@ -133,10 +135,10 @@ export default function ModernAccount() {
   };
 
   const deleteMeter = (id) => {
-    Alert.alert("Delete Meter", "Are you sure you want to remove this meter?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("delete_meter"), t("delete_confirm"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("delete"),
         style: "destructive",
         onPress: async () => {
           await supabase.from("meters").delete().eq("id", id);
@@ -180,7 +182,7 @@ export default function ModernAccount() {
       >
         {/* Meters Section */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>My Meter</Text>
+          <Text style={styles.sectionTitle}>{t("my_meter")}</Text>
           {meters.length === 0 && (
             <TouchableOpacity
               style={styles.addButton}
@@ -191,7 +193,7 @@ export default function ModernAccount() {
               activeOpacity={0.8}
             >
               <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Add Meter</Text>
+              <Text style={styles.addButtonText}>{t("add_meter")}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -234,9 +236,9 @@ export default function ModernAccount() {
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="speedometer-outline" size={64} color="#E5E7EB" />
-            <Text style={styles.emptyStateTitle}>No meter yet</Text>
+            <Text style={styles.emptyStateTitle}>{t("no_meter_yet")}</Text>
             <Text style={styles.emptyStateText}>
-              Tap "Add Meter" to register your first meter.
+              {t("tap_add_meter")}
             </Text>
           </View>
         )}
@@ -248,7 +250,7 @@ export default function ModernAccount() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingMeter ? "Edit Meter" : "New Meter"}
+                {editingMeter ? t("edit_meter") : t("new_meter")}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={28} color="#1F2937" />
@@ -256,22 +258,22 @@ export default function ModernAccount() {
             </View>
 
             <InputField
-              label="Meter Serial Number"
+              label={t("serial_number")}
               value={meterForm.number}
               onChangeText={(t) => setMeterForm({ ...meterForm, number: t })}
-              placeholder="e.g., 123456789"
+              placeholder={t("serial_placeholder")}
             />
             <InputField
-              label="Installation Location"
+              label={t("installation_location")}
               value={meterForm.loc}
               onChangeText={(t) => setMeterForm({ ...meterForm, loc: t })}
-              placeholder="e.g., Kitchen"
+              placeholder={t("location_placeholder")}
             />
             <InputField
-              label="Description (Optional)"
+              label={t("description_optional")}
               value={meterForm.desc}
               onChangeText={(t) => setMeterForm({ ...meterForm, desc: t })}
-              placeholder="Any additional info"
+              placeholder={t("description_placeholder")}
             />
 
             <TouchableOpacity
@@ -280,7 +282,7 @@ export default function ModernAccount() {
               activeOpacity={0.8}
             >
               <Text style={styles.saveButtonText}>
-                {editingMeter ? "Save Changes" : "Add Meter"}
+                {editingMeter ? t("save_changes") : t("add_meter")}
               </Text>
             </TouchableOpacity>
           </View>

@@ -22,6 +22,7 @@ import {
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { supabase } from "../../supa/supabase-client";
+import { useLanguage } from "../../languages/LanguageContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -40,6 +41,7 @@ const COLORS = {
 
 export default function StationQueueScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const mapRef = useRef(null);
 
   // Data State
@@ -143,7 +145,7 @@ export default function StationQueueScreen() {
 
   const handleConfirmQueue = async () => {
     if (!fuelAmount || parseFloat(fuelAmount) <= 0)
-      return Alert.alert("Wait!", "Please enter fuel amount");
+      return Alert.alert(t("wait") || "Wait!", t("fuel_amount_alert"));
     setSubmitting(true);
     try {
       const {
@@ -160,11 +162,11 @@ export default function StationQueueScreen() {
           status: "pending",
         },
       ]);
-      Alert.alert("Confirmed!", "You are now in line.");
+      Alert.alert(t("confirmed_alert"), t("line_alert"));
       setModalVisible(false);
       setSelectedStation(null);
     } catch (e) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("error"), e.message);
     }
     setSubmitting(false);
   };
@@ -189,7 +191,7 @@ export default function StationQueueScreen() {
             <Ionicons name="search" size={20} color={COLORS.TEXT_MUTED} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search fuel..."
+              placeholder={t("search_fuel")}
               value={search}
               onChangeText={setSearch}
             />
@@ -210,7 +212,7 @@ export default function StationQueueScreen() {
                 viewMode === "map" && styles.pillTextActive,
               ]}
             >
-              Map View
+              {t("map_view")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -223,7 +225,7 @@ export default function StationQueueScreen() {
                 viewMode === "list" && styles.pillTextActive,
               ]}
             >
-              List
+              {t("list_view")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -319,7 +321,7 @@ export default function StationQueueScreen() {
                 <View style={styles.listMeta}>
                   <Ionicons name="car" size={14} color={COLORS.TEXT_MUTED} />
                   <Text style={styles.listMetaText}>
-                    {queueMap[item.user_id]?.length || 0} waiting
+                    {queueMap[item.user_id]?.length || 0} {t("waiting")}
                   </Text>
                 </View>
               </View>
@@ -354,9 +356,9 @@ export default function StationQueueScreen() {
 
           <View style={styles.statusGrid}>
             <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>AVG. WAIT</Text>
+              <Text style={styles.statusLabel}>{t("avg_wait")}</Text>
               <Text style={styles.statusValue}>
-                {(queueMap[selectedStation.user_id]?.length || 0) * 5} min
+                {(queueMap[selectedStation.user_id]?.length || 0) * 5} {t("min_suffix")}
               </Text>
             </View>
             <View
@@ -365,9 +367,9 @@ export default function StationQueueScreen() {
                 { borderLeftWidth: 1, borderColor: COLORS.BORDER },
               ]}
             >
-              <Text style={styles.statusLabel}>QUEUE SIZE</Text>
+              <Text style={styles.statusLabel}>{t("queue_size")}</Text>
               <Text style={styles.statusValue}>
-                {queueMap[selectedStation.user_id]?.length || 0} cars
+                {queueMap[selectedStation.user_id]?.length || 0} {t("cars_suffix")}
               </Text>
             </View>
           </View>
@@ -376,7 +378,7 @@ export default function StationQueueScreen() {
             style={styles.actionBtn}
             onPress={() => setModalVisible(true)}
           >
-            <Text style={styles.actionBtnText}>Secure Position in Queue</Text>
+            <Text style={styles.actionBtnText}>{t("secure_position")}</Text>
             <Ionicons name="flash" size={18} color="white" />
           </TouchableOpacity>
         </View>
@@ -387,9 +389,9 @@ export default function StationQueueScreen() {
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView behavior="padding" style={styles.modalSheet}>
             <View style={styles.dragBar} />
-            <Text style={styles.modalTitle}>Refuel Request</Text>
+            <Text style={styles.modalTitle}>{t("refuel_request")}</Text>
 
-            <Text style={styles.label}>Fuel Grade</Text>
+            <Text style={styles.label}>{t("fuel_grade")}</Text>
             <View style={styles.gradeContainer}>
               {["Diesel", "Benzene"].map((type) => (
                 <TouchableOpacity
@@ -412,11 +414,11 @@ export default function StationQueueScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Quantity (Liters)</Text>
+            <Text style={styles.label}>{t("quantity_liters")}</Text>
             <TextInput
               style={styles.modalInput}
               keyboardType="numeric"
-              placeholder="Ex: 45"
+              placeholder={t("quantity_placeholder")}
               value={fuelAmount}
               onChangeText={setFuelAmount}
             />
@@ -428,7 +430,7 @@ export default function StationQueueScreen() {
               {submitting ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.submitBtnText}>Confirm Queue Entry</Text>
+                <Text style={styles.submitBtnText}>{t("confirm_queue")}</Text>
               )}
             </TouchableOpacity>
 
@@ -436,7 +438,7 @@ export default function StationQueueScreen() {
               style={styles.cancelBtn}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.cancelText}>Go Back</Text>
+              <Text style={styles.cancelText}>{t("go_back")}</Text>
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </View>

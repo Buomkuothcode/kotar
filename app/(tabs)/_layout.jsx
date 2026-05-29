@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useLanguage } from "../languages/LanguageContext";
 
 const { width } = Dimensions.get("window");
 
@@ -84,6 +85,8 @@ const ModernHeader = ({ title }) => {
 };
 
 const AppLayout = () => {
+  const { t } = useLanguage();
+
   return (
     <>
       <StatusBar barStyle="dark-content" />
@@ -100,9 +103,9 @@ const AppLayout = () => {
         <Tabs.Screen
           name="index"
           options={{
-            headerTitle: "HOME",
+            headerTitle: (t("home") || "HOME").toUpperCase(),
             tabBarIcon: ({ focused }) => (
-              <TabIcon name="grid" label="Home" focused={focused} index={0} />
+              <TabIcon name="grid" label={t("home") || "Home"} focused={focused} index={0} />
             ),
           }}
           listeners={{ tabPress: () => Haptics.selectionAsync() }}
@@ -111,11 +114,11 @@ const AppLayout = () => {
         <Tabs.Screen
           name="meter"
           options={{
-            headerTitle: "Meter",
+            headerTitle: (t("meter") || "Meter").toUpperCase(),
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 name="speedometer"
-                label="Meter"
+                label={t("meter") || "Meter"}
                 focused={focused}
                 index={1}
               />
@@ -126,11 +129,11 @@ const AppLayout = () => {
         <Tabs.Screen
           name="bill"
           options={{
-            headerTitle: "BILLING",
+            headerTitle: (t("billing") || "BILLING").toUpperCase(),
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 name="receipt"
-                label="Billing"
+                label={t("billing") || "Billing"}
                 focused={focused}
                 index={1}
               />
@@ -142,11 +145,11 @@ const AppLayout = () => {
         <Tabs.Screen
           name="history"
           options={{
-            headerTitle: "LEDGER_DATA",
+            headerTitle: (t("history") || "LEDGER_DATA").toUpperCase(),
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 name="layers"
-                label="History"
+                label={t("history") || "History"}
                 focused={focused}
                 index={2}
               />
@@ -158,11 +161,11 @@ const AppLayout = () => {
         <Tabs.Screen
           name="account"
           options={{
-            headerTitle: "USER_PROFILE",
+            headerTitle: (t("profile") || "USER_PROFILE").toUpperCase(),
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 name="person-circle"
-                label="Profile"
+                label={t("profile") || "Profile"}
                 focused={focused}
                 index={3}
               />

@@ -13,6 +13,8 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../../supa/supabase-client";
+import { useLanguage } from "../../languages/LanguageContext";
+import LanguageSwitcher from "../../../components/LanguageSwitcher";
 
 const SignUp = () => {
   const [fullName, setFullName] = useState("");
@@ -20,9 +22,11 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
+
   const handleSignUp = async () => {
     if (!email || !password || !fullName) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert(t("error"), t("fill_all_fields"));
       return;
     }
 
@@ -43,7 +47,7 @@ const SignUp = () => {
     });
 
     if (signUpError) {
-      Alert.alert("Error", signUpError.message);
+      Alert.alert(t("error"), signUpError.message);
       setLoading(false);
       return;
     }
@@ -60,11 +64,12 @@ const SignUp = () => {
 
     setLoading(false);
     Alert.alert(
-      "Account Created",
-      "Your account has been created successfully.",
+      t("account_created"),
+      t("account_created_success"),
     );
     router.replace("../../app/(tabs)/index");
   };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -72,17 +77,16 @@ const SignUp = () => {
     >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <LanguageSwitcher />
           <Text style={styles.brandName}>Kotar</Text>
-          <Text style={styles.welcomeText}>Create Account</Text>
-          <Text style={styles.subText}>
-            Join us to manage your electricity usage
-          </Text>
+          <Text style={styles.welcomeText}>{t("create_account")}</Text>
+          <Text style={styles.subText}>{t("join_us")}</Text>
         </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder={t("full_name")}
             placeholderTextColor="#999"
             value={fullName}
             onChangeText={setFullName}
@@ -90,7 +94,7 @@ const SignUp = () => {
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t("email")}
             placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
@@ -100,7 +104,7 @@ const SignUp = () => {
 
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t("password")}
             placeholderTextColor="#999"
             value={password}
             onChangeText={setPassword}
@@ -115,14 +119,14 @@ const SignUp = () => {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
+              <Text style={styles.buttonText}>{t("sign_up")}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-              <Text style={styles.signUpLink}>Login</Text>
+            <Text style={styles.footerText}>{t("already_have_account")}</Text>
+            <TouchableOpacity onPress={() => router.replace("../Login/Login")}>
+              <Text style={styles.signUpLink}>{t("login")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -138,8 +142,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   header: {
-    marginTop: 80,
-    marginBottom: 40,
+    marginTop: 50,
+    marginBottom: 30,
     alignItems: "center",
   },
   brandName: {

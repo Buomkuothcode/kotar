@@ -12,16 +12,19 @@ import {
   View,
 } from "react-native";
 import { supabase } from "../../supa/supabase-client";
+import { useLanguage } from "../../languages/LanguageContext";
+import LanguageSwitcher from "../../../components/LanguageSwitcher";
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert(t("error"), t("fill_all_fields"));
       return;
     }
 
@@ -32,7 +35,7 @@ const Login = ({ navigation }) => {
     });
 
     if (error) {
-      Alert.alert("Login Failed", error.message);
+      Alert.alert(t("login_failed"), error.message);
       setLoading(false);
     } else {
       setLoading(false);
@@ -47,15 +50,16 @@ const Login = ({ navigation }) => {
       style={styles.container}
     >
       <View style={styles.header}>
+        <LanguageSwitcher />
         <Text style={styles.brandName}>Kotar</Text>
-        <Text style={styles.welcomeText}>Welcome Back</Text>
-        <Text style={styles.subText}>Sign in to track your usage</Text>
+        <Text style={styles.welcomeText}>{t("welcome_back")}</Text>
+        <Text style={styles.subText}>{t("sign_in_sub")}</Text>
       </View>
 
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("email")}
           placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
@@ -65,16 +69,16 @@ const Login = ({ navigation }) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder={t("password")}
           placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
-        <TouchableOpacity onPress={() => {}}>
-          <Text style={styles.forgotText}>Forgot Password?</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("../Forgot")}>
+  <Text style={styles.forgotText}>{t("forgot_password")}</Text>
+</TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
@@ -84,16 +88,16 @@ const Login = ({ navigation }) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>{t("login")}</Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>{t("dont_have_account")}</Text>
           <TouchableOpacity
             onPress={() => router.replace("../Account/account")}
           >
-            <Text style={styles.signUpLink}>Sign Up</Text>
+            <Text style={styles.signUpLink}>{t("sign_up")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -108,8 +112,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
   },
   header: {
-    marginTop: 100,
-    marginBottom: 40,
+    marginTop: 60,
+    marginBottom: 30,
     alignItems: "center",
   },
   brandName: {
@@ -179,3 +183,4 @@ const styles = StyleSheet.create({
 });
 
 export default Login;
+
