@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -13,10 +14,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,Platform
+  View,
 } from "react-native";
-import { supabase } from "../supa/supabase-client";
 import { useLanguage } from "../languages/LanguageContext";
+import { supabase } from "../supa/supabase-client";
 
 const EDGE_FUNCTION_URL =
   "https://apwvpnpdwkavrujqefxf.supabase.co/functions/v1/read-meter";
@@ -57,7 +58,10 @@ export default function ManualEntryScreen() {
 
     if (error) {
       console.error("Failed to fetch meters", error);
-      Alert.alert(t("error"), t("could_not_load_meters") || "Could not load your meters.");
+      Alert.alert(
+        t("error"),
+        t("could_not_load_meters") || "Could not load your meters.",
+      );
       return;
     }
 
@@ -106,10 +110,7 @@ export default function ManualEntryScreen() {
     }
 
     if (!/^\d+(\.\d+)?$/.test(scannedReading)) {
-      Alert.alert(
-        t("invalid_reading"),
-        t("scanned_value_invalid"),
-      );
+      Alert.alert(t("invalid_reading"), t("scanned_value_invalid"));
       return;
     }
 
@@ -125,9 +126,11 @@ export default function ManualEntryScreen() {
 
       if (error) throw error;
 
-      Alert.alert(t("success"), `${t("reading_saved")}: ${scannedReading} kWh`, [
-        { text: t("ok") || "OK", onPress: () => router.replace("/(tabs)") },
-      ]);
+      Alert.alert(
+        t("success"),
+        `${t("reading_saved")}: ${scannedReading} kWh`,
+        [{ text: t("ok") || "OK", onPress: () => router.replace("/(tabs)") }],
+      );
     } catch (e) {
       Alert.alert(t("save_error"), e.message);
       console.error(e);
@@ -194,7 +197,10 @@ export default function ManualEntryScreen() {
       if (data.status === "success" && data.reading) {
         setScannedReading(data.reading);
         setRawOutput(data.raw_output || "");
-        Alert.alert(t("scan_successful"), `${t("detected_reading")}: ${data.reading}`);
+        Alert.alert(
+          t("scan_successful"),
+          `${t("detected_reading")}: ${data.reading}`,
+        );
       } else {
         const errorMsg =
           data.raw_output || "Could not read meter. Please try again.";
@@ -242,17 +248,18 @@ export default function ManualEntryScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.center}>
-          <Ionicons name="speedometer-outline" size={64} color="#BDC3C7" style={{ marginBottom: 16 }} />
-          <Text style={styles.emptyText}>
-            {t("no_meters_found")}
-          </Text>
+          <Ionicons
+            name="speedometer-outline"
+            size={64}
+            color="#BDC3C7"
+            style={{ marginBottom: 16 }}
+          />
+          <Text style={styles.emptyText}>{t("no_meters_found")}</Text>
           <TouchableOpacity
             style={styles.addMeterButton}
-            onPress={() => router.push("/add-meter")}
+            onPress={() => router.push("./meter")}
           >
-            <Text style={styles.addMeterButtonText}>
-              {t("add_meter")}
-            </Text>
+            <Text style={styles.addMeterButtonText}>{t("add_meter")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -270,7 +277,11 @@ export default function ManualEntryScreen() {
       </View>
 
       <View style={styles.meterSelector}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ alignItems: "center" }}
+        >
           {meters.map((meter) => (
             <TouchableOpacity
               key={meter.id}
@@ -303,8 +314,18 @@ export default function ManualEntryScreen() {
             ]}
             onPress={() => router.push("/add-meter")}
           >
-            <Ionicons name="add" size={16} color="#006442" style={{ marginRight: 2 }} />
-            <Text style={[styles.meterChipText, { color: "#006442", fontWeight: "600" }]}>
+            <Ionicons
+              name="add"
+              size={16}
+              color="#006442"
+              style={{ marginRight: 2 }}
+            />
+            <Text
+              style={[
+                styles.meterChipText,
+                { color: "#006442", fontWeight: "600" },
+              ]}
+            >
               {t("add_meter")}
             </Text>
           </TouchableOpacity>
@@ -333,7 +354,12 @@ export default function ManualEntryScreen() {
               <Text style={styles.utilityName}>KOTAR UTILITY</Text>
               <Text style={styles.invoiceTitle}>METER READING SLIP</Text>
             </View>
-            <Ionicons name="speedometer-outline" size={32} color="#006442" style={styles.headerIcon} />
+            <Ionicons
+              name="speedometer-outline"
+              size={32}
+              color="#006442"
+              style={styles.headerIcon}
+            />
           </View>
 
           <View style={styles.dashedSeparator} />
@@ -349,7 +375,9 @@ export default function ManualEntryScreen() {
             {selectedMeter?.meter_number && (
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>SERIAL NO:</Text>
-                <Text style={styles.metaValue}>{selectedMeter.meter_number}</Text>
+                <Text style={styles.metaValue}>
+                  {selectedMeter.meter_number}
+                </Text>
               </View>
             )}
             {selectedMeter?.location && (

@@ -69,6 +69,9 @@
   "need_two_months": "Kafaltii herreguuf dubbisa ji'a lamaa gadi hin taane barbaachisa. Miitara kanaaf dubbisa dabaladhu.",
   "already_paid": "Duraan Kafalameera",
   "already_paid_desc": "Kafaltiin kun duraan raawwatameera.",
+  "not_approved": "Hayyamni hin kenname",
+  "bill_not_approved_desc": "Kafaltiin kun hayyamina jira. Erga hayyamina booda kafali ni danda'atta.",
+  "pending_approval": "Hayyamina Eegaa",
   "payment_error": "Dogoggora Kafaltii",
   "preparing_payment": "Kafaltiin qophaawaa jira...",
   "payment_cancelled": "Kafaltiin dhiifameera.",
@@ -139,4 +142,3 @@
   "select_meter_optional": "Miitara Filadhu (Filannoo)",
   "general_complaint": "Dhimma Waliigalaa (Miitara malee)"
 }
-

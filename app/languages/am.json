@@ -69,6 +69,9 @@
   "need_two_months": "ሂሳብ ለማስላት ቢያንስ የሁለት ወር ንባብ ያስፈልጋል። ለዚህ ቆጣሪ ንባብ ያክሉ።",
   "already_paid": "ቀደም ሲል ተከፍሏል",
   "already_paid_desc": "ይህ ሂሳብ ቀደም ሲል ተከፍሏል።",
+  "not_approved": "ፈቅድ ያልተሰጠ",
+  "bill_not_approved_desc": "ይህ ሂሳብ በማጽደቅ ላይ ነው። አንዴ ተጸድቆ ስለገባ ሊከፍሉት ይችላሉ።",
+  "pending_approval": "ማጽደቅ በመጠባበቅ ላይ",
   "payment_error": "የክፍያ ስህተት",
   "preparing_payment": "ክፍያ በመዘጋጀት ላይ...",
   "payment_cancelled": "ክፍያው ተሰርዟል።",
@@ -139,4 +142,3 @@
   "select_meter_optional": "ቆጣሪ ይምረጡ (አማራጭ)",
   "general_complaint": "አጠቃላይ ችግር (ያለ ቆጣሪ)"
 }
-

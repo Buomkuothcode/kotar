@@ -52,13 +52,13 @@ const SignUp = () => {
       return;
     }
 
-    // No manual profile insert needed – the database trigger handles it
+ 
     setLoading(false);
     Alert.alert(
       t("account_created"),
       t("account_created_success"),
     );
-    router.replace("../../app/(tabs)/index");
+    router.replace("../Login/Login");
   };
 
   return (

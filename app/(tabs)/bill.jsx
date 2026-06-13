@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { supabase } from "../supa/supabase-client";
 import { useLanguage } from "../languages/LanguageContext";
+import { supabase } from "../supa/supabase-client";
 
 // Progressive tiered cost calculation
 const calculateEnergyCost = (kwh, tariffs) => {
@@ -187,6 +187,16 @@ export default function MonthlyHistoryScreen() {
         existingPayments?.map((p) => p.month_key) || [],
       );
 
+      // Fetch approved bills
+      const { data: approvedBills } = await supabase
+        .from("bills")
+        .select("month_key, approved")
+        .eq("meter_id", selectedMeterId);
+
+      const approvedMonths = new Map(
+        approvedBills?.map((b) => [b.month_key, b.approved]) || [],
+      );
+
       for (let i = 1; i < sortedMonths.length; i++) {
         const currentMonthKey = sortedMonths[i];
         const previousMonthKey = sortedMonths[i - 1];
@@ -224,6 +234,7 @@ export default function MonthlyHistoryScreen() {
           total,
           tieredBreakdown,
           isPaid: paidMonths.has(currentMonthKey),
+          approved: approvedMonths.get(currentMonthKey) ?? false,
           tariffRate:
             tariffs.find(
               (t) =>
@@ -248,6 +259,11 @@ export default function MonthlyHistoryScreen() {
   };
 
   const handlePay = async (bill) => {
+    if (!bill.approved) {
+      Alert.alert(t("not_approved"), t("bill_not_approved_desc"));
+      return;
+    }
+
     if (bill.isPaid) {
       Alert.alert(t("already_paid"), t("already_paid_desc"));
       return;
@@ -306,9 +322,16 @@ export default function MonthlyHistoryScreen() {
       <View style={styles.paperHeader}>
         <View style={styles.headerLeftContainer}>
           <Text style={styles.utilityName}>KOTAR UTILITY</Text>
-          <Text style={styles.invoiceTitle}>{t("billing_history").toUpperCase()}</Text>
+          <Text style={styles.invoiceTitle}>
+            {t("billing_history").toUpperCase()}
+          </Text>
         </View>
-        <Ionicons name="flash" size={32} color="#006442" style={styles.headerIcon} />
+        <Ionicons
+          name="flash"
+          size={32}
+          color="#006442"
+          style={styles.headerIcon}
+        />
       </View>
 
       <View style={styles.dashedSeparator} />
@@ -333,21 +356,26 @@ export default function MonthlyHistoryScreen() {
       <View style={styles.readingsSection}>
         <View style={styles.readingColumn}>
           <Text style={styles.readingLabel}>{t("from").toUpperCase()}</Text>
-          <Text style={styles.readingVal}>{item.firstReadingValue.toFixed(2)} kWh</Text>
+          <Text style={styles.readingVal}>
+            {item.firstReadingValue.toFixed(2)} kWh
+          </Text>
         </View>
         <View style={styles.readingColumn}>
           <Text style={styles.readingLabel}>{t("to").toUpperCase()}</Text>
-          <Text style={styles.readingVal}>{item.lastReadingValue.toFixed(2)} kWh</Text>
+          <Text style={styles.readingVal}>
+            {item.lastReadingValue.toFixed(2)} kWh
+          </Text>
         </View>
         <View style={styles.readingColumn}>
           <Text style={styles.readingLabel}>NET USAGE</Text>
-          <Text style={[styles.readingVal, styles.highlightText]}>{item.consumption.toFixed(2)} kWh</Text>
+          <Text style={[styles.readingVal, styles.highlightText]}>
+            {item.consumption.toFixed(2)} kWh
+          </Text>
         </View>
       </View>
 
       <View style={styles.dashedSeparator} />
 
-     
       <View style={styles.dashedSeparator} />
 
       {/* Grand Total */}
@@ -356,11 +384,19 @@ export default function MonthlyHistoryScreen() {
         <Text style={styles.grandTotalValue}>{item.total.toFixed(2)} ETB</Text>
       </View>
 
-      {/* Paid Stamp or Pay Button */}
+      {/* Paid Stamp, Unapproved, or Pay Button */}
       {item.isPaid ? (
         <View style={styles.paidStampContainer}>
           <View style={styles.paidStamp}>
             <Text style={styles.paidStampText}>{t("paid").toUpperCase()}</Text>
+          </View>
+        </View>
+      ) : !item.approved ? (
+        <View style={styles.unapprovedContainer}>
+          <View style={styles.unapprovedStamp}>
+            <Text style={styles.unapprovedStampText}>
+              {t("pending_approval").toUpperCase()}
+            </Text>
           </View>
         </View>
       ) : (
@@ -368,9 +404,7 @@ export default function MonthlyHistoryScreen() {
           style={styles.payButton}
           onPress={() => handlePay(item)}
         >
-          <Text style={styles.payButtonText}>
-            {t("pay_now").toUpperCase()}
-          </Text>
+          <Text style={styles.payButtonText}>{t("pay_now").toUpperCase()}</Text>
         </TouchableOpacity>
       )}
 
@@ -396,9 +430,7 @@ export default function MonthlyHistoryScreen() {
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.center}>
-          <Text style={styles.emptyText}>
-            {t("no_meters_found")}
-          </Text>
+          <Text style={styles.emptyText}>{t("no_meters_found")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -449,9 +481,7 @@ export default function MonthlyHistoryScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {refreshing
-                ? t("calculating")
-                : t("need_two_months")}
+              {refreshing ? t("calculating") : t("need_two_months")}
             </Text>
           </View>
         }
@@ -727,6 +757,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     letterSpacing: 3,
+  },
+  unapprovedContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 4,
+  },
+  unapprovedStamp: {
+    borderWidth: 2,
+    borderColor: "#F59E0B",
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 20,
+    transform: [{ rotate: "-4deg" }],
+  },
+  unapprovedStampText: {
+    color: "#F59E0B",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
   },
   emptyContainer: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 16, color: "#6B7280", textAlign: "center" },

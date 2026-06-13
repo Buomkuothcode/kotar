@@ -69,6 +69,9 @@
   "need_two_months": "Need at least two months of readings to calculate bills.\nAdd readings for this meter.",
   "already_paid": "Already Paid",
   "already_paid_desc": "This bill has already been paid.",
+  "not_approved": "Not Approved",
+  "bill_not_approved_desc": "This bill is pending approval. You will be able to pay once it has been approved.",
+  "pending_approval": "Pending Approval",
   "payment_error": "Payment Error",
   "preparing_payment": "Preparing payment...",
   "payment_cancelled": "Payment was cancelled.",
@@ -139,4 +142,3 @@
   "select_meter_optional": "Select Meter (Optional)",
   "general_complaint": "General Issue (No Meter)"
 }
-
