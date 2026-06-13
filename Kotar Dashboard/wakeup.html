@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kotar Utility - Wake Up Hardware</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts - Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ==================== PAGE LOADER ==================== -->
+  <div id="page-loader" class="page-loader">
+    <div class="loader-content">
+      <div class="loader-logo">
+        <i class="fa-solid fa-bolt loader-bolt"></i>
+        <span>Kotar</span>
+      </div>
+      <div class="loader-bar">
+        <div class="loader-progress"></div>
+      </div>
+      <div class="loader-text">Loading secure portal...</div>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD VIEW ==================== -->
+  <div id="dashboard-container" class="dashboard-container" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bolt"></i> <span>Kotar</span>
+        </div>
+        <div class="brand-subtitle" style="color: rgba(255,255,255,0.6); font-size: 11px; margin-top: 4px;">ADMIN PORTAL</div>
+      </div>
+      
+      <ul class="sidebar-menu">
+        <li class="sidebar-item" data-tab="overview">
+          <a href="index.html" class="sidebar-link">
+            <i class="fa-solid fa-chart-pie"></i> <span>Overview & Charts</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="complaints">
+          <a href="complaints.html" class="sidebar-link">
+            <i class="fa-solid fa-circle-exclamation"></i> <span>Complaints</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="meters">
+          <a href="meters.html" class="sidebar-link">
+            <i class="fa-solid fa-gauge-high"></i> <span>Meters & Users</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="readings">
+          <a href="readings.html" class="sidebar-link">
+            <i class="fa-solid fa-barcode"></i> <span>Readings & OCR</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="payments">
+          <a href="payments.html" class="sidebar-link">
+            <i class="fa-solid fa-receipt"></i> <span>Payments</span>
+          </a>
+        </li>
+        <li class="sidebar-item active" data-tab="wakeup">
+          <a href="wakeup.html" class="sidebar-link">
+            <i class="fa-solid fa-signal"></i> <span>Wake Up Devices</span>
+          </a>
+        </li>
+      </ul>
+      
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <i class="fa-solid fa-user-tie"></i>
+          <span id="admin-email-display" class="admin-email">admin@kotar.com</span>
+        </div>
+        <button id="signout-btn" class="btn btn-signout">
+          <i class="fa-solid fa-power-off"></i> <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main View Section -->
+    <main class="main-content">
+      <!-- Toolbar Header -->
+      <header class="header-bar">
+        <h1 id="page-title-text" class="page-title">Hardware Devices Manager</h1>
+        <div class="header-actions">
+          <button id="refresh-data-btn" class="btn btn-secondary" style="height: 40px; padding: 0 16px;">
+            <i class="fa-solid fa-rotate"></i> <span>Refresh Data</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Viewports -->
+      <div class="tab-content">
+        
+        <!-- 6. WAKE UP VIEWPORT -->
+        <section id="view-wakeup" class="view-section active fade-in">
+          <div class="split-layout">
+            <!-- Left Panel: Meters Control Listing -->
+            <div class="list-panel data-card" style="flex: 1.3;">
+              <div class="card-header-toolbar">
+                <h3 class="chart-title"><i class="fa-solid fa-gauge-high"></i> Hardware Devices</h3>
+                <button id="wakeup-all-btn" class="btn btn-secondary btn-wakeup-all" style="height: 40px; padding: 0 16px; font-weight:700; color:white; border:none; display: inline-flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-rss"></i> <span>Wake Up All Devices</span>
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Meter Number</th>
+                      <th>Location</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="wakeup-table-body">
+                    <!-- SKELETON PLACEHOLDERS -->
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton-text"></div></td>
+                      <td><div class="skeleton-text medium"></div></td>
+                      <td><div class="skeleton-badge"></div></td>
+                      <td><div class="skeleton-badge" style="width:80px;"></div></td>
+                    </tr>
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton-text"></div></td>
+                      <td><div class="skeleton-text medium"></div></td>
+                      <td><div class="skeleton-badge"></div></td>
+                      <td><div class="skeleton-badge" style="width:80px;"></div></td>
+                    </tr>
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton-text"></div></td>
+                      <td><div class="skeleton-text medium"></div></td>
+                      <td><div class="skeleton-badge"></div></td>
+                      <td><div class="skeleton-badge" style="width:80px;"></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Right Panel: Remote Connection Console -->
+            <div class="detail-panel" style="flex: 1;">
+              <div class="data-card" style="margin-bottom: 0;">
+                <div class="card-header-toolbar" style="padding: 16px 24px;">
+                  <h3 class="chart-title"><i class="fa-solid fa-terminal"></i> Remote Connection Logs</h3>
+                  <button id="clear-logs-btn" class="btn btn-secondary" style="height: 30px; font-size:12px; padding: 0 10px;">
+                    <i class="fa-solid fa-trash-can"></i> <span>Clear</span>
+                  </button>
+                </div>
+                <div class="terminal-console" id="terminal-console">
+                  <div class="terminal-header">
+                    <span>Terminal Session Active</span>
+                    <span id="terminal-status">IDLE</span>
+                  </div>
+                  <div class="terminal-body" id="terminal-body">
+                    <p class="log-line"><span class="log-time">[11:29:11]</span> <span class="log-info">Kotar Utility Device Manager initialized.</span></p>
+                    <p class="log-line"><span class="log-time">[11:29:11]</span> <span class="log-info">Ready to scan and wake up remote meter reader modules.</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        &copy; 2026 Kotar Utility. Administrative Portal. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <!-- Supabase client JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Auth & Session Management -->
+  <script src="auth.js"></script>
+
+  <!-- Wake Up Page Logic -->
+  <script src="wakeup.js"></script>
+</body>
+</html>

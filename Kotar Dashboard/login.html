@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kotar Utility - Admin Sign In</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts - Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ==================== PAGE LOADER ==================== -->
+  <div id="page-loader" class="page-loader">
+    <div class="loader-content">
+      <div class="loader-logo">
+        <i class="fa-solid fa-bolt loader-bolt"></i>
+        <span>Kotar</span>
+      </div>
+      <div class="loader-bar">
+        <div class="loader-progress"></div>
+      </div>
+      <div class="loader-text">Loading secure portal...</div>
+    </div>
+  </div>
+
+  <!-- ==================== LOGIN VIEW ==================== -->
+  <div id="auth-container" class="login-page">
+    <div class="login-card fade-in">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bolt"></i> Kotar
+        </div>
+        <div class="brand-subtitle">Utility Administrative Dashboard</div>
+      </div>
+      
+      <div id="auth-error-alert" class="auth-error"></div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="form-input" required placeholder="admin@kotar.com">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-input" required placeholder="••••••••">
+        </div>
+        <button type="submit" id="login-submit-btn" class="btn">
+          <span>Sign In</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supabase client JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Auth & Session Management -->
+  <script src="auth.js"></script>
+
+  <!-- Login Logic -->
+  <script src="login.js"></script>
+</body>
+</html>

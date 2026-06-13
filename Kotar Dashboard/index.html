@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kotar Utility - Overview Dashboard</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts - Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ==================== PAGE LOADER ==================== -->
+  <div id="page-loader" class="page-loader">
+    <div class="loader-content">
+      <div class="loader-logo">
+        <i class="fa-solid fa-bolt loader-bolt"></i>
+        <span>Kotar</span>
+      </div>
+      <div class="loader-bar">
+        <div class="loader-progress"></div>
+      </div>
+      <div class="loader-text">Loading secure portal...</div>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD VIEW ==================== -->
+  <div id="dashboard-container" class="dashboard-container" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-logo">
+          <i class="fa-solid fa-bolt"></i> <span>Kotar</span>
+        </div>
+        <div class="brand-subtitle" style="color: rgba(255,255,255,0.6); font-size: 11px; margin-top: 4px;">ADMIN PORTAL</div>
+      </div>
+      
+      <ul class="sidebar-menu">
+        <li class="sidebar-item active" data-tab="overview">
+          <a href="index.html" class="sidebar-link">
+            <i class="fa-solid fa-chart-pie"></i> <span>Overview & Charts</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="complaints">
+          <a href="complaints.html" class="sidebar-link">
+            <i class="fa-solid fa-circle-exclamation"></i> <span>Complaints</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="meters">
+          <a href="meters.html" class="sidebar-link">
+            <i class="fa-solid fa-gauge-high"></i> <span>Meters & Users</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="readings">
+          <a href="readings.html" class="sidebar-link">
+            <i class="fa-solid fa-barcode"></i> <span>Readings & OCR</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="payments">
+          <a href="payments.html" class="sidebar-link">
+            <i class="fa-solid fa-receipt"></i> <span>Payments</span>
+          </a>
+        </li>
+        <li class="sidebar-item" data-tab="wakeup">
+          <a href="wakeup.html" class="sidebar-link">
+            <i class="fa-solid fa-signal"></i> <span>Wake Up Devices</span>
+          </a>
+        </li>
+      </ul>
+      
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <i class="fa-solid fa-user-tie"></i>
+          <span id="admin-email-display" class="admin-email">admin@kotar.com</span>
+        </div>
+        <button id="signout-btn" class="btn btn-signout">
+          <i class="fa-solid fa-power-off"></i> <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main View Section -->
+    <main class="main-content">
+      <!-- Toolbar Header -->
+      <header class="header-bar">
+        <h1 id="page-title-text" class="page-title">Overview & Analytics</h1>
+        <div class="header-actions">
+          <button id="refresh-data-btn" class="btn btn-secondary" style="height: 40px; padding: 0 16px;">
+            <i class="fa-solid fa-rotate"></i> <span>Refresh Data</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Viewports -->
+      <div class="tab-content">
+        
+        <!-- 1. OVERVIEW VIEWPORT -->
+        <section id="view-overview" class="view-section active fade-in">
+          <!-- Quick metrics cards -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon-box"><i class="fa-solid fa-users"></i></div>
+              <div class="metric-info">
+                <div class="metric-label">Total Users</div>
+                <div id="stat-total-users" class="metric-value">
+                  <div class="skeleton-text short" style="height: 24px; margin: 4px 0;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon-box"><i class="fa-solid fa-gauge-high"></i></div>
+              <div class="metric-info">
+                <div class="metric-label">Active Meters</div>
+                <div id="stat-total-meters" class="metric-value">
+                  <div class="skeleton-text short" style="height: 24px; margin: 4px 0;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon-box"><i class="fa-solid fa-sack-dollar"></i></div>
+              <div class="metric-info">
+                <div class="metric-label">Total Revenue</div>
+                <div id="stat-total-revenue" class="metric-value">
+                  <div class="skeleton-text medium" style="height: 24px; margin: 4px 0;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon-box" style="background-color: #fee2e2; color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <div class="metric-info">
+                <div class="metric-label">Open Complaints</div>
+                <div id="stat-open-complaints" class="metric-value">
+                  <div class="skeleton-text short" style="height: 24px; margin: 4px 0;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="charts-grid">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title"><i class="fa-solid fa-chart-line"></i> Revenue Trend (ETB)</h3>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="revenue-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3 class="chart-title"><i class="fa-solid fa-chart-simple"></i> Energy Consumption (kWh)</h3>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="consumption-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        &copy; 2026 Kotar Utility. Administrative Portal. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <!-- Supabase client JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- ChartJS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Auth & Session Management -->
+  <script src="auth.js"></script>
+
+  <!-- Overview Page Logic -->
+  <script src="overview.js"></script>
+</body>
+</html>
