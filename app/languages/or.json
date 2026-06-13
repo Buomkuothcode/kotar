@@ -10,6 +10,7 @@
   "create_account": "Herrega Banadhaa",
   "join_us": "Fayyadama ibsaa keessan bulchuuf natti makamaa",
   "full_name": "Maqaa Guutuu",
+  "phone_number": "Lakkoofsa Bilbilaa",
   "already_have_account": "Duraan herrega qabduu? ",
   "error": "Dogoggora",
   "fill_all_fields": "Maaloo dirree hundaa guutaa",
@@ -126,6 +127,16 @@
   "scanned_value_invalid": "Gatiin skan godhame lakkoofsa sirrii miti.",
   "save_error": "Dogoggora Olkaa'uu",
   "verifying_payment": "Kafaltiin mirkanaa'aa jira...",
-  "no_payments_yet": "Seenaan kafaltii hin argamne."
+  "no_payments_yet": "Seenaan kafaltii hin argamne.",
+  "complaints": "Koomiiwwan",
+  "submit_complaint": "Koomii Dhiyeessi",
+  "complaint_title": "Mata Duree Koomii",
+  "complaint_title_placeholder": "fkn, Gatii kafaltii sirrii hin taane",
+  "complaint_description": "Ibsa Koomii",
+  "complaint_description_placeholder": "Mee dhimma kana bal'inaan asitti ibsaa...",
+  "complaint_submitted": "Koomiin Dhiyaateera",
+  "complaint_submit_success": "Koomiin keessan milkiin dhiyaateera.",
+  "select_meter_optional": "Miitara Filadhu (Filannoo)",
+  "general_complaint": "Dhimma Waliigalaa (Miitara malee)"
 }
 

@@ -41,11 +41,12 @@ export default function PaymentScreen() {
       let email = session?.user?.email || "customer@example.com";
       let firstName = "Customer";
       let lastName = "User";
+      let profilePhoneNumber = null;
 
       if (session?.user) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, email")
+          .select("full_name, email, phone_number")
           .eq("id", session.user.id)
           .single();
 
@@ -55,6 +56,7 @@ export default function PaymentScreen() {
 
         if (profile) {
           email = profile.email || email;
+          profilePhoneNumber = profile.phone_number;
           if (profile.full_name) {
             const parts = profile.full_name.trim().split(" ");
             firstName = parts[0] || firstName;
@@ -84,6 +86,10 @@ export default function PaymentScreen() {
           description: `${monthName}`,
         },
       };
+
+      if (profilePhoneNumber) {
+        requestBody.phone_number = profilePhoneNumber;
+      }
 
       console.log("Sending request to Chapa:", JSON.stringify(requestBody, null, 2));
 

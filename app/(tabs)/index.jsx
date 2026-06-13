@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View,Platform
 } from "react-native";
 import { supabase } from "../supa/supabase-client";
 import { useLanguage } from "../languages/LanguageContext";
@@ -223,7 +223,7 @@ export default function ManualEntryScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2E7D32" />
+        <ActivityIndicator size="large" color="#006442" />
         <Text style={styles.loadingText}>{t("loading_meters")}</Text>
       </View>
     );
@@ -231,9 +231,86 @@ export default function ManualEntryScreen() {
 
   const selectedMeter = meters.find((m) => m.id === selectedMeterId);
 
+  if (meters.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{t("enter_reading")}</Text>
+          <TouchableOpacity onPress={onRefresh}>
+            <Ionicons name="refresh" size={24} color="#006442" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.center}>
+          <Ionicons name="speedometer-outline" size={64} color="#BDC3C7" style={{ marginBottom: 16 }} />
+          <Text style={styles.emptyText}>
+            {t("no_meters_found")}
+          </Text>
+          <TouchableOpacity
+            style={styles.addMeterButton}
+            onPress={() => router.push("/add-meter")}
+          >
+            <Text style={styles.addMeterButtonText}>
+              {t("add_meter")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t("enter_reading")}</Text>
+        <TouchableOpacity onPress={onRefresh}>
+          <Ionicons name="refresh" size={24} color="#006442" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.meterSelector}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
+          {meters.map((meter) => (
+            <TouchableOpacity
+              key={meter.id}
+              style={[
+                styles.meterChip,
+                selectedMeterId === meter.id && styles.meterChipSelected,
+              ]}
+              onPress={() => setSelectedMeterId(meter.id)}
+            >
+              <Text
+                style={[
+                  styles.meterChipText,
+                  selectedMeterId === meter.id && styles.meterChipTextSelected,
+                ]}
+              >
+                {meter.name || meter.meter_number || t("meter")}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[
+              styles.meterChip,
+              {
+                backgroundColor: "#E6F0EC",
+                borderColor: "#006442",
+                borderStyle: "dashed",
+                flexDirection: "row",
+                alignItems: "center",
+              },
+            ]}
+            onPress={() => router.push("/add-meter")}
+          >
+            <Ionicons name="add" size={16} color="#006442" style={{ marginRight: 2 }} />
+            <Text style={[styles.meterChipText, { color: "#006442", fontWeight: "600" }]}>
+              {t("add_meter")}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -241,93 +318,78 @@ export default function ManualEntryScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#2E7D32"
-            colors={["#2E7D32"]}
+            tintColor="#006442"
+            colors={["#006442"]}
           />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t("enter_reading")}</Text>
-          <View style={styles.headerPlaceholder} />
-        </View>
+        <View style={styles.paperInvoice}>
+          {/* Tear-off slip top effect */}
+          <View style={styles.tearOffTop} />
 
-        {/* Meter Selection Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="flash-outline" size={20} color="#2E7D32" />
-            <Text style={styles.cardTitle}>{t("select_meter")}</Text>
+          {/* Invoice Receipt Header */}
+          <View style={styles.paperHeader}>
+            <View style={styles.headerLeftContainer}>
+              <Text style={styles.utilityName}>KOTAR UTILITY</Text>
+              <Text style={styles.invoiceTitle}>METER READING SLIP</Text>
+            </View>
+            <Ionicons name="speedometer-outline" size={32} color="#006442" style={styles.headerIcon} />
           </View>
-          {meters.length === 0 ? (
-            <View style={styles.emptyMeters}>
-              <Ionicons name="alert-circle-outline" size={32} color="#9CA3AF" />
-              <Text style={styles.emptyText}>{t("no_meters_found")}</Text>
-              <TouchableOpacity
-                style={styles.addMeterButton}
-                onPress={() => router.push("/add-meter")}
-              >
-                <Text style={styles.addMeterButtonText}>
-                  {t("add_meter")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.meterList}>
-              {meters.map((meter) => (
-                <TouchableOpacity
-                  key={meter.id}
-                  style={[
-                    styles.meterItem,
-                    selectedMeterId === meter.id && styles.meterItemSelected,
-                  ]}
-                  onPress={() => setSelectedMeterId(meter.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.meterInfo}>
-                    <Text
-                      style={[
-                        styles.meterName,
-                        selectedMeterId === meter.id &&
-                          styles.meterNameSelected,
-                      ]}
-                    >
-                      {meter.name || t("unnamed_meter")}
-                    </Text>
-                    {meter.meter_number && (
-                      <Text style={styles.meterNumber}>
-                        {meter.meter_number}
-                      </Text>
-                    )}
-                  </View>
-                  {selectedMeterId === meter.id && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color="#2E7D32"
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
 
-        {/* Reading Display Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="speedometer-outline" size={20} color="#2E7D32" />
-            <Text style={styles.cardTitle}>{t("kwh_value")}</Text>
-          </View>
-          <View style={styles.readingWrapper}>
-            {scannedReading ? (
-              <>
-                <Text style={styles.readingValue}>{scannedReading}</Text>
-                <Text style={styles.readingUnit}>kWh</Text>
-              </>
-            ) : (
-              <Text style={styles.readingPlaceholder}>—</Text>
+          <View style={styles.dashedSeparator} />
+
+          {/* Invoice Meta details */}
+          <View style={styles.metaContainer}>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>{t("meter")}:</Text>
+              <Text style={styles.metaValue}>
+                {selectedMeter?.name || t("unnamed_meter")}
+              </Text>
+            </View>
+            {selectedMeter?.meter_number && (
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>SERIAL NO:</Text>
+                <Text style={styles.metaValue}>{selectedMeter.meter_number}</Text>
+              </View>
             )}
+            {selectedMeter?.location && (
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>LOCATION:</Text>
+                <Text style={styles.metaValue}>{selectedMeter.location}</Text>
+              </View>
+            )}
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>DATE:</Text>
+              <Text style={styles.metaValue}>
+                {new Date().toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
           </View>
 
+          <View style={styles.dashedSeparator} />
+
+          {/* Reading Display LCD Screen */}
+          <View style={styles.readingWrapper}>
+            <Text style={styles.readingLabel}>DETECTED VALUE</Text>
+            <View style={styles.readingLCD}>
+              {scannedReading ? (
+                <>
+                  <Text style={styles.readingValue}>{scannedReading}</Text>
+                  <Text style={styles.readingUnit}>kWh</Text>
+                </>
+              ) : (
+                <Text style={styles.readingPlaceholder}>——————</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.dashedSeparator} />
+
+          {/* Camera Scan Trigger button inside receipt */}
           <TouchableOpacity
             style={[styles.scanButton, scanning && styles.scanButtonDisabled]}
             onPress={scannedReading ? handleRescan : handleScan}
@@ -355,6 +417,9 @@ export default function ManualEntryScreen() {
           {rawOutput && !scannedReading && (
             <Text style={styles.errorHint}>{rawOutput}</Text>
           )}
+
+          {/* Tear-off slip bottom effect */}
+          <View style={styles.tearOffBottom} />
         </View>
 
         {/* Save Button */}
@@ -392,7 +457,7 @@ export default function ManualEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#F3F4F6",
   },
   scrollContent: {
     paddingBottom: 30,
@@ -401,7 +466,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#F3F4F6",
   },
   loadingText: {
     marginTop: 12,
@@ -413,149 +478,192 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1F2937",
-    letterSpacing: -0.3,
-  },
-  headerPlaceholder: {
-    width: 40,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#374151",
-    marginLeft: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    color: "#1F2937",
   },
-  meterList: {
-    borderRadius: 16,
+  meterSelector: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  meterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 30,
+    backgroundColor: "#F3F4F6",
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  meterChipSelected: {
+    backgroundColor: "#006442",
+    borderColor: "#006442",
+  },
+  meterChipText: {
+    fontSize: 14,
+    color: "#4B5563",
+    fontWeight: "500",
+  },
+  meterChipTextSelected: {
+    color: "#FFFFFF",
+  },
+  paperInvoice: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     overflow: "hidden",
   },
-  meterItem: {
+  tearOffTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderBottomWidth: 2,
+    borderBottomColor: "#FFFFFF",
+    borderStyle: "dotted",
+  },
+  tearOffBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderTopWidth: 2,
+    borderTopColor: "#FFFFFF",
+    borderStyle: "dotted",
+  },
+  paperHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
+    alignItems: "center",
+    marginTop: 6,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
   },
-  meterItemSelected: {
-    backgroundColor: "#E8F5E9",
-    borderColor: "#A5D6A7",
-  },
-  meterInfo: {
+  headerLeftContainer: {
     flex: 1,
   },
-  meterName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#1F2937",
+  utilityName: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#006442",
+    letterSpacing: 1,
   },
-  meterNameSelected: {
-    color: "#1B5E20",
-  },
-  meterNumber: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  emptyMeters: {
-    alignItems: "center",
-    paddingVertical: 30,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#6B7280",
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  addMeterButton: {
-    backgroundColor: "#2E7D32",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 30,
-  },
-  addMeterButtonText: {
-    color: "#FFFFFF",
+  invoiceTitle: {
+    fontSize: 11,
     fontWeight: "600",
-    fontSize: 16,
+    color: "#6B7280",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  headerIcon: {
+    marginLeft: 10,
+    opacity: 0.85,
+  },
+  dashedSeparator: {
+    borderWidth: 0.8,
+    borderColor: "#9CA3AF",
+    borderStyle: "dashed",
+    marginVertical: 12,
+    height: 1,
+    width: "100%",
+  },
+  metaContainer: {
+    flexDirection: "column",
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  metaLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  metaValue: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#1F2937",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   readingWrapper: {
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 12,
+  },
+  readingLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  readingLCD: {
+    width: "100%",
+    backgroundColor: "#F0F4F1",
+    borderColor: "#D1D5DB",
+    borderWidth: 1.5,
+    borderRadius: 12,
     paddingVertical: 20,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   readingValue: {
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: "800",
-    color: "#2E7D32",
-    letterSpacing: -1,
-    lineHeight: 64,
+    color: "#006442",
+    letterSpacing: -0.5,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   readingUnit: {
-    fontSize: 18,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "800",
     color: "#4B5563",
-    marginTop: 4,
+    marginLeft: 8,
+    marginTop: 18,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   readingPlaceholder: {
-    fontSize: 56,
+    fontSize: 36,
     fontWeight: "300",
-    color: "#D1D5DB",
+    color: "#BDC3C7",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   scanButton: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#006442",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
     borderRadius: 40,
-    shadowColor: "#2E7D32",
+    shadowColor: "#006442",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -583,7 +691,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   saveButton: {
-    backgroundColor: "#1B5E20",
+    backgroundColor: "#006442",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -591,7 +699,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 18,
     borderRadius: 40,
-    shadowColor: "#1B5E20",
+    shadowColor: "#006442",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -605,5 +713,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginLeft: 10,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 12,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  addMeterButton: {
+    backgroundColor: "#006442",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+  },
+  addMeterButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

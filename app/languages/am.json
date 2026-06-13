@@ -10,6 +10,7 @@
   "create_account": "መለያ ይፍጠሩ",
   "join_us": "የኤሌክትሪክ አጠቃቀምዎን ለማስተዳደር እኛን ይቀላቀሉ",
   "full_name": "ሙሉ ስም",
+  "phone_number": "ስልክ ቁጥር",
   "already_have_account": "ቀደም ሲል መለያ አለዎት? ",
   "error": "ስህተት",
   "fill_all_fields": "እባክዎን ሁሉንም መስኮች ይሙሉ",
@@ -126,6 +127,16 @@
   "scanned_value_invalid": "የተቀኘው ዋጋ ትክክለኛ ቁጥር አይደለም።",
   "save_error": "የማስቀመጥ ስህተት",
   "verifying_payment": "ክፍያ በመረጋገጥ ላይ...",
-  "no_payments_yet": "ምንም የክፍያ ታሪክ አልተገኘም።"
+  "no_payments_yet": "ምንም የክፍያ ታሪክ አልተገኘም።",
+  "complaints": "አቤቱታዎች",
+  "submit_complaint": "አቤቱታ አቅርብ",
+  "complaint_title": "የአቤቱታ ርዕስ",
+  "complaint_title_placeholder": "ምሳሌ፡ የተሳሳተ የክፍያ መጠን",
+  "complaint_description": "የችግሩ መግለጫ",
+  "complaint_description_placeholder": "እባክዎን ችግሩን እዚህ በዝርዝር ያብራሩ...",
+  "complaint_submitted": "አቤቱታ ቀርቧል",
+  "complaint_submit_success": "አቤቱታዎ በተሳካ ሁኔታ ቀርቧል።",
+  "select_meter_optional": "ቆጣሪ ይምረጡ (አማራጭ)",
+  "general_complaint": "አጠቃላይ ችግር (ያለ ቆጣሪ)"
 }
 

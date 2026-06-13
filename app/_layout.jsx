@@ -4,6 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar, DeviceEventEmitter, Appearance, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LanguageProvider, useLanguage } from './languages/LanguageContext';
+import { requestPermissions, schedulePaymentNotifications } from './services/notificationService';
 
 const COLORS = {
   primary: '#1e4b89',
@@ -27,6 +28,16 @@ global.setAppTheme = async (newTheme) => {
 function RootLayoutContent() {
   const [theme, setTheme] = useState('light');
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const hasPermission = await requestPermissions();
+      if (hasPermission) {
+        await schedulePaymentNotifications();
+      }
+    };
+    initNotifications();
+  }, []);
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -92,6 +103,7 @@ function RootLayoutContent() {
         <Stack.Screen name="screens/Account/account" options={{ headerShown: false }} />
         <Stack.Screen name="screens/Login/Login" options={{ headerShown: false }} />
         <Stack.Screen name="screens/welcome/welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="screens/complaint/complaint" options={{ title: t("complaints") || 'Complaints' }} />
 
         <Stack.Screen name="screens/Exams/exams" options={{ title: t("exams") || 'Exams' }} />
         <Stack.Screen name="screens/Questions/Exam" options={{ title: t("exam") || 'Exam' }} />

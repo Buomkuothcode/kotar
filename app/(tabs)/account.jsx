@@ -120,6 +120,9 @@ const Account = () => {
         />
         <Text style={styles.userName}>{profile?.full_name || "Devi Star"}</Text>
         <Text style={styles.userEmail}>{profile?.email}</Text>
+        {profile?.phone_number && (
+          <Text style={styles.userPhone}>{profile.phone_number}</Text>
+        )}
       </View>
 
       {/* Settings Options */}
@@ -129,6 +132,12 @@ const Account = () => {
           title={t("my_meters_menu")}
           subtitle={`${meters.length} ${t("connected")}`}
           onPress={() => router.push("/meter")}
+        />
+
+        <MenuOption
+          icon="alert-circle-outline"
+          title={t("complaints")}
+          onPress={() => router.push("/screens/complaint/complaint")}
         />
 
         <MenuOption icon="settings-outline" title={t("settings")} />
@@ -179,6 +188,7 @@ const styles = StyleSheet.create({
   },
   userName: { fontSize: 22, fontWeight: "bold", color: "#333" },
   userEmail: { fontSize: 14, color: "#777", marginTop: 4 },
+  userPhone: { fontSize: 14, color: "#777", marginTop: 4 },
   menuContainer: { paddingHorizontal: 20, marginTop: 20 },
   menuItem: {
     flexDirection: "row",

@@ -10,6 +10,7 @@
   "create_account": "Create Account",
   "join_us": "Join us to manage your electricity usage",
   "full_name": "Full Name",
+  "phone_number": "Phone Number",
   "already_have_account": "Already have an account? ",
   "error": "Error",
   "fill_all_fields": "Please fill in all fields",
@@ -126,6 +127,16 @@
   "scanned_value_invalid": "The scanned value is not a valid number.",
   "save_error": "Save Error",
   "verifying_payment": "Verifying payment...",
-  "no_payments_yet": "No payment history found."
+  "no_payments_yet": "No payment history found.",
+  "complaints": "Complaints",
+  "submit_complaint": "Submit Complaint",
+  "complaint_title": "Complaint Title",
+  "complaint_title_placeholder": "e.g., Incorrect billing amount",
+  "complaint_description": "Description of the Issue",
+  "complaint_description_placeholder": "Explain the issue in detail here...",
+  "complaint_submitted": "Complaint Submitted",
+  "complaint_submit_success": "Your complaint has been submitted successfully.",
+  "select_meter_optional": "Select Meter (Optional)",
+  "general_complaint": "General Issue (No Meter)"
 }
 

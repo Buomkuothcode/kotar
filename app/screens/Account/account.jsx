@@ -19,29 +19,29 @@ import LanguageSwitcher from "../../../components/LanguageSwitcher";
 const SignUp = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
 
   const handleSignUp = async () => {
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !phoneNumber) {
       Alert.alert(t("error"), t("fill_all_fields"));
       return;
     }
 
     setLoading(true);
-    console.log("Attempting to sign up with:", { email, fullName });
+    console.log("Attempting to sign up with:", { email, fullName, phoneNumber });
 
-    // We pass full_name in metadata.
-    // If you have a trigger, it will pick it up automatically.
-    // If you don't have a trigger, this creates the Auth user first.
+    // Auth user creation – the trigger will create the profiles row automatically
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: password,
       options: {
         data: {
           full_name: fullName,
+          phone_number: phoneNumber,
         },
       },
     });
@@ -52,16 +52,7 @@ const SignUp = () => {
       return;
     }
 
-    // ONLY keep this block if you DO NOT have a database trigger
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert([{ id: data.user.id, full_name: fullName, email: email }]);
-
-    if (profileError) {
-      // If it says "duplicate key", it means your trigger already handled it!
-      console.log("Profile Sync Info:", profileError.message);
-    }
-
+    // No manual profile insert needed – the database trigger handles it
     setLoading(false);
     Alert.alert(
       t("account_created"),
@@ -100,6 +91,15 @@ const SignUp = () => {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder={t("phone_number")}
+            placeholderTextColor="#999"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
           />
 
           <TextInput

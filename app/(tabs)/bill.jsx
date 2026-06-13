@@ -347,51 +347,7 @@ export default function MonthlyHistoryScreen() {
 
       <View style={styles.dashedSeparator} />
 
-      {/* Tariff Progressive breakdown */}
-      <View style={styles.breakdownHeaderRow}>
-        <Text style={styles.breakdownHeaderLabel}>PROGRESSIVE BILL BREAKDOWN (TIERED)</Text>
-      </View>
-
-      {item.tieredBreakdown && item.tieredBreakdown.length > 0 ? (
-        item.tieredBreakdown.map((tier, idx) => {
-          const label = tier.maxKwh === Infinity || tier.maxKwh === null
-            ? `> ${tier.minKwh} kWh`
-            : `${tier.minKwh} - ${tier.maxKwh} kWh`;
-          return (
-            <View key={idx} style={styles.tierBreakdownRow}>
-              <Text style={styles.tierLabel}>{label}</Text>
-              <Text style={styles.tierFormula}>
-                {tier.kwh.toFixed(2)} kWh × {tier.rate.toFixed(4)} ETB
-              </Text>
-              <Text style={styles.tierCost}>{tier.cost.toFixed(2)} ETB</Text>
-            </View>
-          );
-        })
-      ) : (
-        <View style={styles.tierBreakdownRow}>
-          <Text style={styles.tierLabel}>Flat Energy Charge</Text>
-          <Text style={styles.tierCost}>{item.energyCost.toFixed(2)} ETB</Text>
-        </View>
-      )}
-
-      <View style={styles.dashedSeparator} />
-
-      {/* Fees and Taxes */}
-      <View style={styles.chargesContainer}>
-        <View style={styles.chargesRow}>
-          <Text style={styles.chargesLabel}>{t("energy_charge")}</Text>
-          <Text style={styles.chargesValue}>{item.energyCost.toFixed(2)} ETB</Text>
-        </View>
-        <View style={styles.chargesRow}>
-          <Text style={styles.chargesLabel}>{t("service_fee")}</Text>
-          <Text style={styles.chargesValue}>{item.serviceFee.toFixed(2)} ETB</Text>
-        </View>
-        <View style={styles.chargesRow}>
-          <Text style={styles.chargesLabel}>{t("vat")}</Text>
-          <Text style={styles.chargesValue}>{item.vat.toFixed(2)} ETB</Text>
-        </View>
-      </View>
-
+     
       <View style={styles.dashedSeparator} />
 
       {/* Grand Total */}
